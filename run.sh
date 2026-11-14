@@ -1,0 +1,6 @@
+#!/bin/sh
+# HTML DB App 起動スクリプト（Linux / macOS）
+cd "$(dirname "$0")"
+JAR=target/htmldbapp-1.0.0-all.jar
+[ -f "$JAR" ] || { echo "JAR がありません。先に mvn package を実行してください。"; exit 1; }
+exec java -jar "$JAR" "$@"
