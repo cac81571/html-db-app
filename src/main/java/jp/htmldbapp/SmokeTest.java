@@ -1,5 +1,6 @@
 package jp.htmldbapp;
 
+import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -22,26 +23,15 @@ final class SmokeTest {
             String[] formValue = { "" };
             try {
                 ScreenPanel sp = frame.getScreenPanel();
+                Path customer = Path.of("顧客管理", "customer.html").toAbsolutePath().normalize();
+                waitUntil(sp::isReady, 30);
+                if (sp.getCurrentFile() == null || !customer.equals(sp.getCurrentFile().toAbsolutePath().normalize())) {
+                    sp.showScreen(customer);
+                }
                 waitUntil(() -> sp.isReady() && sp.getCurrentFile() != null
+                        && customer.equals(sp.getCurrentFile().toAbsolutePath().normalize())
                         && Boolean.TRUE.equals(eval(sp, "!!window.__htmldb && !!document.getElementById('btn_initSample')")), 30);
                 AppLog.info("[smoke] 画面読込完了: " + sp.getCurrentFile().getFileName());
-                eval(sp, "document.querySelector('#customerForm button[data-insert]').click(); true");
-                waitUntil(() -> {
-                    String place = String.valueOf(eval(sp,
-                            "(function(){var o=document.getElementById('out_saveCustomer');"
-                                    + "var id=document.querySelector('[name=\"in_id\"]');"
-                                    + "var beside=id&&id.nextElementSibling;"
-                                    + "var besideErr=(beside&&(beside.className||'').indexOf('htmldb-key-error')>=0)?beside.textContent:'';"
-                                    + "var msg=document.getElementById('msg');"
-                                    + "var above=(o&&o.nextElementSibling&&o.nextElementSibling.id==='customerForm')?'above':'';"
-                                    + "return above+'|'+(o?o.textContent:'')+'|beside='+besideErr+'|top='+(msg?msg.textContent:'');})()"));
-                    String label = String.valueOf(eval(sp,
-                            "(function(){var lb=document.querySelector('#customerForm .row label');return lb?lb.textContent:'';})()"));
-                    return place.startsWith("above|顧客IDは必須です|beside=|top=")
-                            && !place.substring(place.indexOf("|top=")).contains("必須")
-                            && label.contains("＊");
-                }, 30);
-                AppLog.info("[smoke] 必須: 登録パネルの上だけ");
                 eval(sp, "document.getElementById('btn_initSample').click(); true");
                 waitUntil(() -> String.valueOf(eval(sp,
                         "document.getElementById('out_searchCustomer').innerHTML")).contains("htmldb-result"), 30);
@@ -50,6 +40,19 @@ final class SmokeTest {
                 AppLog.info("[smoke] msg=" + msg);
                 AppLog.info("[smoke] 結果:\n" + text);
                 if (text.contains("山田")) {
+                    String mark = String.valueOf(eval(sp,
+                            "(function(){var lb=document.querySelector('#customerForm .row label');return lb?lb.textContent:'';})()"));
+                    if (mark.contains("＊")) throw new IllegalStateException("自動採番に ＊ が付いています: " + mark);
+                    eval(sp, "(function(){document.querySelector('[name=\"in_newName\"]').value='自動 採番';"
+                            + "document.querySelector('#customerForm button[data-insert]').click();return true;})()");
+                    waitUntil(() -> {
+                        String id = String.valueOf(eval(sp, "document.querySelector('[name=\"in_id\"]').value"));
+                        String list = String.valueOf(eval(sp, "document.getElementById('out_searchCustomer').innerText"));
+                        String mode = String.valueOf(eval(sp,
+                                "document.querySelector('#customerForm button[data-insert]').textContent"));
+                        return id.matches("\\d+") && list.contains(id) && list.contains("自動 採番") && "更新".equals(mode);
+                    }, 30);
+                    AppLog.info("[smoke] 自動採番: 空欄の顧客IDに番号を入れて登録");
                     eval(sp, "document.querySelector('#out_searchCustomer button[data-row-action=\"edit\"]').click(); true");
                     waitUntil(() -> {
                         formValue[0] = String.valueOf(eval(sp,
@@ -60,7 +63,7 @@ final class SmokeTest {
                         String mode = String.valueOf(eval(sp,
                                 "(function(){var b=document.querySelector('#customerForm button[data-insert]');"
                                         + "var id=document.querySelector('[name=\"in_id\"]');"
-                                        + "return (b?b.textContent:'')+'|'+(id&&id.readOnly);})()"));
+                                        + "return (b?b.textContent:'')+'|'+(id&&id.disabled);})()"));
                         return "1|山田 太郎|東京都|taro@example.com|2024-04-01".equals(formValue[0])
                                 && list.contains("山田") && "更新|true".equals(mode);
                     }, 30);
@@ -81,13 +84,11 @@ final class SmokeTest {
                         String mode = String.valueOf(eval(sp,
                                 "(function(){var b=document.querySelector('#customerForm button[data-insert]');"
                                         + "var id=document.querySelector('[name=\"in_id\"]');"
-                                        + "return (b?b.textContent:'')+'|'+(id&&id.readOnly);})()"));
-                        return "||".equals(formValue[0]) && "登録|false".equals(mode);
+                                        + "return (b?b.textContent:'')+'|'+(id&&id.disabled);})()"));
+                        return "||".equals(formValue[0]) && "登録|true".equals(mode);
                     }, 30);
                     AppLog.info("[smoke] クリア: 登録欄を空にしました");
-                    eval(sp, "(function(){document.querySelector('[name=\"in_id\"]').value='1';"
-                            + "document.querySelector('[name=\"in_newName\"]').value='重複';"
-                            + "document.querySelector('#customerForm button[data-insert]').click();return true;})()");
+                    eval(sp, "document.querySelector('#customerForm button[data-insert]').click(); true");
                     waitUntil(() -> {
                         String place = String.valueOf(eval(sp,
                                 "(function(){var o=document.getElementById('out_saveCustomer');"
@@ -98,6 +99,37 @@ final class SmokeTest {
                                 && !place.substring(split).contains("の実行でエラー");
                     }, 30);
                     AppLog.info("[smoke] 登録エラー: 登録パネルの上だけ");
+                    Path items = Path.of("CSV編集", "items.html").toAbsolutePath().normalize();
+                    sp.showScreen(items);
+                    waitUntil(() -> sp.isReady() && sp.getCurrentFile() != null
+                            && items.equals(sp.getCurrentFile().toAbsolutePath().normalize())
+                            && Boolean.TRUE.equals(eval(sp, "!!document.getElementById('btn_searchItem')")), 30);
+                    eval(sp, "document.getElementById('btn_searchItem').click(); true");
+                    waitUntil(() -> String.valueOf(eval(sp,
+                            "document.getElementById('out_searchItem').innerText")).contains("ノートA5"), 30);
+                    AppLog.info("[smoke] CSV検索: ノートA5");
+                    Path identity = Path.of("顧客管理", "identity.html").toAbsolutePath().normalize();
+                    sp.showScreen(identity);
+                    waitUntil(() -> sp.isReady() && sp.getCurrentFile() != null
+                            && identity.equals(sp.getCurrentFile().toAbsolutePath().normalize())
+                            && Boolean.TRUE.equals(eval(sp, "!!document.getElementById('btn_initTicket')")), 30);
+                    eval(sp, "document.getElementById('btn_initTicket').click(); true");
+                    waitUntil(() -> String.valueOf(eval(sp,
+                            "document.getElementById('out_searchTicket').innerHTML")).contains("htmldb-result"), 30);
+                    eval(sp, "(function(){document.querySelector('[name=\"in_title\"]').value='採番メモ';"
+                            + "document.querySelector('#ticketForm button[data-insert]').click();return true;})()");
+                    waitUntil(() -> {
+                        String state = String.valueOf(eval(sp,
+                                "(function(){var id=document.querySelector('[name=\"in_id\"]');"
+                                        + "var b=document.querySelector('#ticketForm button[data-insert]');"
+                                        + "var list=document.getElementById('out_searchTicket').innerText;"
+                                        + "var lb=document.querySelector('#ticketForm .row label');"
+                                        + "return (id&&id.value)+'|'+(id&&id.disabled)+'|'+(b&&b.textContent)+'|'+(lb?lb.textContent:'')+'|'+list;})()"));
+                        int bar = state.indexOf('|');
+                        return bar > 0 && state.substring(0, bar).matches("\\d+")
+                                && state.contains("|true|更新|番号|") && state.contains("採番メモ");
+                    }, 30);
+                    AppLog.info("[smoke] DB採番: 番号を入力せず登録");
                     code = 0;
                 }
                 AppLog.info(code == 0 ? "[smoke] OK" : "[smoke] NG");

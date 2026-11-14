@@ -63,7 +63,7 @@ public class ScreenPanel extends JFXPanel {
         this.actionService = actionService;
         this.statusSink = statusSink;
         this.bridge = new JsBridge(this::onExecute, this::onOpenScreen,
-                (level, msg) -> AppLog.info("[画面] " + level + ": " + msg));
+                (level, msg) -> AppLog.info("[画面] " + level + ": " + msg), this::onScalar);
         this.injectScript = loadInjectScript();
         Platform.runLater(this::initFx);
     }
@@ -293,10 +293,52 @@ public class ScreenPanel extends JFXPanel {
         });
     }
 
+    /** 自動採番。結果表には出さず、先頭の1件を画面のキー項目へ返す。 */
+    private void onScalar(String sqlName, String screenJson) {
+        sqlExecutor.submit(() -> {
+            ActionService.Result r = actionService.run(sqlName, screenJson);
+            String value = r.ok ? firstCell(r) : "";
+            String error = !r.ok ? r.message : (value.isEmpty() ? "自動採番の結果がありません" : "");
+            String js = "window.__htmldb && window.__htmldb.autoDone("
+                    + JsonOutput.toJson(value) + "," + JsonOutput.toJson(error) + ")";
+            Platform.runLater(() -> {
+                try {
+                    engine.executeScript(js);
+                } catch (RuntimeException e) {
+                    AppLog.error("自動採番の反映に失敗しました", e);
+                }
+            });
+        });
+    }
+
+    /** DB が INSERT で採番したキー。無ければ JS の null */
+    private static String generatedJs(ActionService.Result r) {
+        if (!r.ok || r.exec == null || r.exec.getGeneratedKey() == null) return "null";
+        String text = formatScalar(r.exec.getGeneratedKey());
+        return text.isEmpty() ? "null" : JsonOutput.toJson(text);
+    }
+
+    private static String firstCell(ActionService.Result r) {
+        if (r.exec == null || !r.exec.isQuery() || r.exec.getRows().isEmpty()) return "";
+        var row = r.exec.getRows().get(0);
+        if (row.isEmpty() || row.get(0) == null) return "";
+        return formatScalar(row.get(0));
+    }
+
+    private static String formatScalar(Object v) {
+        if (v == null) return "";
+        if (v instanceof Number n) {
+            double d = n.doubleValue();
+            if (!Double.isInfinite(d) && d == Math.rint(d)) return Long.toString(n.longValue());
+        }
+        return String.valueOf(v);
+    }
+
     private void render(String sqlName, ActionService.Result r) {
         try {
             String js = "window.__htmldb && window.__htmldb.done(" + JsonOutput.toJson(sqlName) + ","
-                    + r.ok + "," + JsonOutput.toJson(r.html) + "," + JsonOutput.toJson(r.message) + ")";
+                    + r.ok + "," + JsonOutput.toJson(r.html) + "," + JsonOutput.toJson(r.message) + ","
+                    + generatedJs(r) + ")";
             Object found = engine.executeScript(js);
             if (r.ok && Boolean.FALSE.equals(found) && r.exec != null && r.exec.isQuery()) {
                 AppLog.warn("結果表示用の要素 id=\"out_" + sqlName + "\" が画面にありません");

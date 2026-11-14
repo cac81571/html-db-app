@@ -25,6 +25,10 @@ class ActionServiceTest {
         ActionService.Result init = svc.run("initSample", "{}");
         assertTrue(init.ok, init.message);
 
+        ActionService.Result next = svc.run("nextCustomerId", "{}");
+        assertTrue(next.ok, next.message);
+        assertEquals(5, ((Number) next.exec.getRows().get(0).get(0)).intValue());
+
         // 空欄（NULL）なら全件
         ActionService.Result all = svc.run("searchCustomer", "{\"params\":{\"name\":\"\",\"pref\":\"\"},\"types\":{}}");
         assertTrue(all.ok, all.message);

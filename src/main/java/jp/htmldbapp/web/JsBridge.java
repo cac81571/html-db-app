@@ -17,11 +17,20 @@ public class JsBridge {
     /** (画面ファイル名, 渡す値の JSON) */
     private final BiConsumer<String, String> opener;
     private final BiConsumer<String, String> logger;
+    /** (sqlName, screenJson) 自動採番など、結果を画面の表に出さない SQL */
+    private final BiConsumer<String, String> scalar;
 
-    public JsBridge(Handler handler, BiConsumer<String, String> opener, BiConsumer<String, String> logger) {
+    public JsBridge(Handler handler, BiConsumer<String, String> opener, BiConsumer<String, String> logger,
+            BiConsumer<String, String> scalar) {
         this.handler = handler;
         this.opener = opener;
         this.logger = logger;
+        this.scalar = scalar;
+    }
+
+    /** JS: window.htmldbBridge.scalar('nextCustomerId', '{"params":{...}}') — 結果の先頭を JS の autoDone へ返す */
+    public void scalar(String sqlName, String screenJson) {
+        scalar.accept(sqlName, screenJson == null ? "{}" : screenJson);
     }
 
     /** JS: window.htmldbBridge.execute('searchCustomer', '{"params":{...}}', 'otherSql') */

@@ -15,6 +15,8 @@
  *  - data-clear="#id"      : その要素の中の in_* を空にして、そこへスクロールする。登録モードに戻す
  *  - data-focus="in_xxx"   : data-clear のあと、その入力欄にカーソルを置く
  *  - data-key              : キー項目。ラベルに ＊ を付け、空欄なら登録結果の位置に必須と出す
+ *  - data-auto="名前"      : 登録のたびに sql/名前.sql の結果をキーへ入れる。欄は非活性で ＊ は付けない
+ *  - data-increment        : DB の identity で採番するキー。欄は非活性で ＊ は付けない。INSERT 後に採番値を入れる
  *  - data-insert="名前"    : 登録モードで実行する sql/名前.sql（ボタン文言は「登録」）
  *  - data-update="名前"    : 更新モードで実行する sql/名前.sql（ボタン文言は「更新」）
  *  - body の data-keep : 別画面へ移る前の入力・結果・選択行を覚え、戻ったときに復元する
@@ -244,12 +246,16 @@
   };
 
   /** Java から呼ばれる: 結果を out_xxx に表示。out_xxx があれば true を返す */
-  H.done = function (name, ok, html, message) {
+  H.done = function (name, ok, html, message, generatedKey) {
     var shown = H.outputAlias[name] || name;
     var btn = document.getElementById('btn_' + shown) || document.getElementById('btn_' + name);
     if (btn) { btn.removeAttribute('data-htmldb-busy'); }
     var out = document.getElementById('out_' + shown) || document.getElementById('out_' + name);
     if (!(isEntryButton(btn) && out)) H.msg(message, !ok);
+    if (ok) {
+      applyGeneratedKey(btn, generatedKey);
+      enterUpdateAfterInsert(btn);
+    }
     if (out) {
       out.innerHTML = html;
       delete H.selection[out.id];
@@ -375,10 +381,8 @@
     var btn = ancestor(e.target, function (n) { return n.id && n.id.indexOf('btn_') === 0; });
     if (btn) {
       e.preventDefault();
-      var sqlName = sqlForButton(btn);
-      if (!sqlName) return;
-      if ((btn.getAttribute('data-insert') || btn.getAttribute('data-update')) && !requireKeys(scopeOf(btn))) return;
-      H.run(sqlName, btn);
+      if (btn.getAttribute('data-htmldb-busy')) return;
+      startEntry(btn);
       return;
     }
     var openBtn = ancestor(e.target, function (n) {
@@ -437,16 +441,56 @@
     return !trim(el.value);
   }
 
-  /** 登録モードならキーは入力可、更新モードなら読み取り専用。ボタン文言も切り替える */
+  function isIncrement(el) {
+    return !!(el && el.getAttribute && el.getAttribute('data-increment') != null);
+  }
+
+  /** DB が採番した値を、空欄の data-increment へ入れて更新モードにする */
+  function applyGeneratedKey(btn, value) {
+    if (value == null || trim(String(value)) === '') return;
+    if (!isEntryButton(btn)) return;
+    if ((btn.getAttribute('data-mode') || 'insert') === 'update') return;
+    var root = scopeOf(btn);
+    var keys = root.querySelectorAll('[data-key][data-increment]');
+    for (var i = 0; i < keys.length; i++) {
+      if (!keyEmpty(keys[i])) continue;
+      keys[i].value = String(value);
+      return;
+    }
+  }
+
+  /** 登録に成功し、キーが揃っていれば編集モードにする */
+  function enterUpdateAfterInsert(btn) {
+    if (!isEntryButton(btn)) return;
+    if ((btn.getAttribute('data-mode') || 'insert') === 'update') return;
+    var root = scopeOf(btn);
+    var keys = root.querySelectorAll('[data-key]');
+    if (!keys.length) return;
+    for (var i = 0; i < keys.length; i++) {
+      if (keyEmpty(keys[i])) return;
+    }
+    setEntryMode(root, 'update');
+  }
+
+  function isAutoKey(el) {
+    return isIncrement(el) || autoSqlName(el) !== '';
+  }
+
+  /** 登録モードなら手入力キーは入力可、更新モードなら読み取り専用。自動採番は常に非活性 */
   function setEntryMode(root, mode) {
     if (!root || !root.querySelectorAll) return;
     var update = mode === 'update';
     var keys = root.querySelectorAll('[data-key]');
     for (var i = 0; i < keys.length; i++) {
       var el = keys[i];
-      markKeyLabel(fieldLabel(el));
+      markKeyLabel(fieldLabel(el), el);
       addClass(el, 'htmldb-key');
-      if (update) {
+      if (isAutoKey(el)) {
+        el.disabled = true;
+        if ('readOnly' in el) el.readOnly = false;
+        addClass(el, 'htmldb-readonly');
+      } else if (update) {
+        el.disabled = false;
         if (tagOf(el) === 'select') el.disabled = true;
         else el.readOnly = true;
         addClass(el, 'htmldb-readonly');
@@ -474,9 +518,15 @@
     return sql;
   }
 
-  /** ラベルの末尾に ＊ を付ける。太字にはしない。 */
-  function markKeyLabel(label) {
-    if (!label || label.querySelector('.htmldb-key-mark')) return;
+  /** 手入力のキーだけ、ラベルの末尾に ＊ を付ける。自動採番には付けない。 */
+  function markKeyLabel(label, el) {
+    if (!label) return;
+    var old = label.querySelector('.htmldb-key-mark');
+    if (el && isAutoKey(el)) {
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      return;
+    }
+    if (old) return;
     addClass(label, 'htmldb-key');
     var mark = document.createElement('span');
     mark.className = 'htmldb-key-mark';
@@ -522,13 +572,38 @@
     if (out) out.innerHTML = '';
   }
 
-  /** 空のキーがあれば、登録パネルの上にメッセージを出して false */
+  function inInsertMode(root) {
+    var btn = root && root.querySelector ? root.querySelector('button[data-insert], button[data-update]') : null;
+    if (!btn) return true;
+    return (btn.getAttribute('data-mode') || 'insert') !== 'update';
+  }
+
+  function autoSqlName(el) {
+    var name = el.getAttribute('data-auto');
+    return name == null ? '' : trim(name);
+  }
+
+  /** 登録のたびに採番し直すキー。欄に値が入っていても手入力とはみなさない */
+  function firstAuto(root, filled) {
+    if (!inInsertMode(root)) return null;
+    var keys = root.querySelectorAll('[data-key][data-auto]');
+    for (var i = 0; i < keys.length; i++) {
+      if (isIncrement(keys[i])) continue;
+      if (!autoSqlName(keys[i]) || filled[keys[i].name]) continue;
+      return keys[i];
+    }
+    return null;
+  }
+
+  /** 空のキーがあれば、登録パネルの上にメッセージを出して false。自動採番の空欄は登録時だけ許す */
   function requireKeys(root) {
     var keys = root.querySelectorAll('[data-key]');
+    var allowAuto = inInsertMode(root);
     var missing = [];
     var first = null;
     for (var i = 0; i < keys.length; i++) {
       if (!keyEmpty(keys[i])) continue;
+      if (allowAuto && (autoSqlName(keys[i]) || isIncrement(keys[i]))) continue;
       var label = fieldLabel(keys[i]);
       var caption = labelCaption(label) || keys[i].name;
       missing.push(caption + 'は必須です');
@@ -539,6 +614,51 @@
     if (first.focus) first.focus();
     return false;
   }
+
+  /** 登録ボタン。data-auto のキーは毎回採番してから SQL を実行する */
+  function startEntry(btn, filled) {
+    var sqlName = sqlForButton(btn);
+    if (!sqlName) return;
+    var root = scopeOf(btn);
+    filled = filled || {};
+    var key = isEntryButton(btn) ? firstAuto(root, filled) : null;
+    if (key) {
+      var autoSql = autoSqlName(key);
+      if (!/^[A-Za-z0-9_\-]+$/.test(autoSql)) {
+        showEntryMessage(root, '自動採番の SQL 名が不正です', true);
+        return;
+      }
+      btn.setAttribute('data-htmldb-busy', 'true');
+      showEntryMessage(root, '自動採番しています...', false);
+      H.autoPending = { btn: btn, key: key, filled: filled };
+      window.htmldbBridge.scalar(autoSql, JSON.stringify(H.collect()));
+      return;
+    }
+    if (isEntryButton(btn) && !requireKeys(root)) return;
+    H.run(sqlName, btn);
+  }
+
+  /** Java から呼ばれる: 自動採番 SQL の先頭の値をキーへ入れて、登録を続ける */
+  H.autoDone = function (value, error) {
+    var pending = H.autoPending;
+    H.autoPending = null;
+    if (!pending || !pending.btn) return;
+    var btn = pending.btn;
+    btn.removeAttribute('data-htmldb-busy');
+    var root = scopeOf(btn);
+    if (error) {
+      showEntryMessage(root, error, true);
+      return;
+    }
+    if (value == null || trim(String(value)) === '') {
+      showEntryMessage(root, '自動採番の結果がありません', true);
+      return;
+    }
+    pending.key.value = String(value);
+    var filled = pending.filled || {};
+    filled[pending.key.name] = true;
+    startEntry(btn, filled);
+  };
 
   var modeButtons = document.querySelectorAll('button[data-insert], button[data-update]');
   for (var m = 0; m < modeButtons.length; m++) setEntryMode(scopeOf(modeButtons[m]), 'insert');

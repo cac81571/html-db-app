@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>商品CSV</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>商品CSV</h1>
+
+  <div id="msg"></div>
+
+  <fieldset>
+    <legend>検索</legend>
+    <label>品名</label><input name="in_name" placeholder="部分一致（空欄で全件）">
+    <label>分類</label>
+    <select name="in_category">
+      <option value="">（すべて）</option>
+      <option>文具</option>
+      <option>食品</option>
+      <option>雑貨</option>
+    </select>
+    <button id="btn_searchItem">検索</button>
+    <p class="hint">データは起動フォルダの <code>CSV編集/items.csv</code>（UTF-8）です。H2 の CSVREAD で検索し、登録・更新・削除は CSVWRITE で同じファイルへ書き戻します。データベースに表は作りません。</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>一覧</legend>
+    <div id="out_searchItem"
+         data-fields="商品ID=id,品名=itemName,分類=itemCategory,数量=qty,メモ=note"
+         data-row-edit="#itemForm"
+         data-row-delete="deleteItem"
+         data-row-then="searchItem"
+         data-row-confirm="この商品を CSV から削除します。よろしいですか？">（検索ボタンを押してください）</div>
+  </fieldset>
+
+  <div id="out_saveItem"></div>
+
+  <fieldset id="itemForm">
+    <legend>登録</legend>
+    <div class="row"><label>商品ID</label><input name="in_id" data-key data-auto="nextItemId" type="number" data-type="int" placeholder="自動採番" disabled></div>
+    <div class="row"><label>品名</label><input name="in_itemName" size="28"></div>
+    <div class="row"><label>分類</label><input name="in_itemCategory" size="20"></div>
+    <div class="row"><label>数量</label><input name="in_qty" type="number" data-type="int"></div>
+    <div class="row"><label>メモ</label><input name="in_note" size="40"></div>
+    <div class="actions">
+      <button id="btn_saveItem" data-insert="insertItem" data-update="updateItem" data-then="searchItem">登録</button>
+      <button type="button" class="secondary" data-clear="#itemForm">クリア</button>
+    </div>
+    <p class="hint">商品IDは自動採番で、入力はできません。登録に成功するとボタンは「更新」になります。「クリア」で新規の登録に戻ります。</p>
+  </fieldset>
+</body>
+</html>

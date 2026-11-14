@@ -45,7 +45,9 @@ SELECT * FROM customer WHERE id = :customerId
 | `data-row-then="searchCustomer"` | 行の削除が成功したあとに続けて実行する |
 | `data-row-confirm="削除しますか？"` | 行を削除する前の確認 |
 | `data-clear="#customerForm"` | その要素の中にある `in_*` を空にする。キーは入力可に戻り、ボタンは「登録」 |
-| `data-key` | キー項目。ラベルに ＊ を付ける。編集中は変更不可。空欄なら登録結果と同じ位置に「必須です」と出す |
+| `data-key` | 手入力のキー。ラベルに ＊ を付ける。編集中は変更不可。空欄なら登録結果と同じ位置に「必須です」と出す |
+| `data-auto="nextCustomerId"` | 登録のたびに `sql/nextCustomerId.sql` の結果をキーへ入れる。欄は非活性で、＊ は付かない。手入力とは併用しない |
+| `data-increment` | DB の identity で採番するキー。欄は非活性で、＊ は付かない。登録 SQL ではその列を書かず、採番された値を後から欄へ入れる |
 | `data-insert="insertCustomer"` | 登録モードで実行する SQL。ボタン文言は「登録」 |
 | `data-update="updateCustomer"` | 更新モードで実行する SQL。ボタン文言は「更新」 |
 | `data-keep`（`<body>`） | 別画面へ移る直前の入力値・結果・選択行を覚え、戻ったときにそのまま表示する。F5（再読込）では破棄する |
@@ -81,7 +83,7 @@ SELECT * FROM customer WHERE id = :customerId
      data-row-confirm="この顧客を削除します。よろしいですか？"></div>
 ```
 
-「編集」はその行の値を下の入力欄へ入れます。キー項目（`data-key`）のラベルには ＊ が付き、編集中は変更できません。空欄や登録の失敗は、登録パネルの上に1か所だけ出ます。ボタンは「更新」になり `sql/updateCustomer.sql` を実行します。「クリア」で「登録」に戻り、`sql/insertCustomer.sql` を実行します。
+「編集」はその行の値を下の入力欄へ入れます。手入力のキー（`data-key` のみ）のラベルには ＊ が付き、編集中は変更できません。空欄や登録の失敗は、登録パネルの上に1か所だけ出ます。`data-auto` のキーは登録のたびに SQL の結果（サンプルは最大値 + 1）が入り、欄は非活性です。列自体が identity のときは `data-increment` を付け、登録 SQL からその列を外します。サンプルは `顧客管理/identity.html`（表 `ticket`）です。どちらも手入力とは併用しません。ボタンは「更新」になり `sql/updateCustomer.sql` を実行します。「クリア」で「登録」に戻り、`sql/insertCustomer.sql` を実行します。
 
 別の HTML へ移すときは、`btn_` ではないボタンに `data-open="別画面.html"` を付けます。`<body data-keep>` を付けると、離れる前の入力と結果を覚えて、戻ったときに復元します。
 
@@ -134,7 +136,7 @@ java -jar target\htmldbapp-1.0.0-all.jar
 1. 左の「プロジェクトフォルダ」は、最初は起動したフォルダです。ツリーはその直下の画面フォルダ（`顧客管理` など）から表示します。フォルダの入れ子は、画面フォルダのグループになります。`customer.html` は自動で開きます。
 2. 接続先が「サンプル H2」になっていることを確認（DB は `%USERPROFILE%\.htmldbapp\sample.mv.db` に作られます）。
 3. 「サンプルテーブルを作成」ボタン → テーブル作成・データ投入・検索まで実行されます。
-4. 下の欄に入力して「登録」で保存します。行の「編集」でその顧客を読み込むと、顧客IDは変更できず、ボタンは「更新」になります。行の「削除」で消せます。欄を空にするときは「クリア」です。
+4. 下の欄に入力して「登録」で保存します。登録に成功するとボタンは「更新」になります。行の「編集」でもその顧客を読み込めます。顧客IDは変更できません。行の「削除」で消せます。欄を空にして「登録」に戻すときは「クリア」です。
 
 画面フォルダの HTML や `sql/` の SQL を編集したら、**F5（再読込）** で反映されます（SQL は毎回ファイルから読むので再読込不要）。「追加」「削除」はプロジェクトフォルダへの参照だけを増やしたり外したりします。フォルダ自体は作りませんし、消しません。選んだプロジェクトのルート名はツリーに出さず、中のフォルダから表示します。フォルダは何階層でも置けます。画面フォルダをクリックすると、その中の HTML を表示します。HTML が複数あるときは、ツリーの先頭のファイルです。「絞り込み」に文字を入れるとファイル名で絞れ、Esc で解除します。「全て展開」「全て折りたたむ」でツリーの開閉ができます。フォルダを右クリックするとエクスプローラで開けます。ファイルを右クリックすると、外部エディタまたはサクラエディタで開けます。サクラエディタの場所は「ツール → サクラエディタのパス...」で指定できます。SQL のダブルクリックは外部エディタです。
 
@@ -146,6 +148,7 @@ java -jar target\htmldbapp-1.0.0-all.jar
 プロジェクトフォルダ/      … 左の一覧に追加したフォルダ（初期値は起動したフォルダ）
 ├─ 顧客管理/           … 画面フォルダ
 │   ├─ customer.html       … 一覧と登録
+│   ├─ identity.html       … DB の identity で番号を採る
 │   ├─ style.css
 │   └─ sql/                … この画面の SQL（ボタン名 = ファイル名）
 │       ├─ initSample.sql
@@ -153,7 +156,23 @@ java -jar target\htmldbapp-1.0.0-all.jar
 │       ├─ saveCustomer.sql    … 登録／更新
 │       ├─ insertCustomer.sql
 │       ├─ updateCustomer.sql
-│       └─ deleteCustomer.sql
+│       ├─ deleteCustomer.sql
+│       ├─ nextCustomerId.sql  … 空欄の顧客IDへ入れる番号
+│       ├─ initTicket.sql
+│       ├─ searchTicket.sql
+│       ├─ insertTicket.sql      … 番号列を書かない
+│       ├─ updateTicket.sql
+│       └─ deleteTicket.sql
+├─ CSV編集/            … CSV を H2 の CSVREAD / CSVWRITE で検索・編集するサンプル
+│   ├─ items.html
+│   ├─ items.csv           … 商品データ（UTF-8）
+│   ├─ style.css
+│   └─ sql/
+│       ├─ searchItem.sql
+│       ├─ insertItem.sql
+│       ├─ updateItem.sql
+│       ├─ deleteItem.sql
+│       └─ nextItemId.sql
 ├─ drivers/            … 追加 JDBC ドライバの JAR 置き場（再ビルド不要）
 ├─ dist/               … ビルド済み Windows 用 JAR
 ├─ src/main/java       … Swing 画面・接続管理・WebView ブリッジ（Java）
@@ -167,7 +186,9 @@ java -jar target\htmldbapp-1.0.0-all.jar
 
 作業フォルダ（初期のプロジェクトフォルダ。画面フォルダと `drivers/` がある場所）は **起動したカレントディレクトリ** です。
 `java -Dhtmldbapp.home=D:\myapp -jar ...` で変更できます。
-画面フォルダが無い状態で起動すると、サンプル「顧客管理」が自動で展開されます。古い `screens/` と `sql/` がある場合は「顧客管理」へコピーします。
+画面フォルダが無い状態で起動すると、サンプル「顧客管理」と「CSV編集」が自動で展開されます。古い `screens/` と `sql/` がある場合は「顧客管理」へコピーします。
+
+`CSV編集` はデータベースに表を作らず、H2 の `CSVREAD` で `items.csv` を検索します。登録・更新・削除は同じファイルを読み、変更した内容を `CSVWRITE` で書き戻します。パスは起動したフォルダからの相対パス、文字コードは UTF-8 です。接続先は「サンプル H2」のままで動きます。
 
 設定は `%USERPROFILE%\.htmldbapp\` に保存されます（`-Dhtmldbapp.config=...` で変更可）。
 

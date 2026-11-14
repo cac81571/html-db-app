@@ -13,6 +13,8 @@ class ExecResult {
     boolean truncated
     /** 更新件数（複数文の場合は合計） */
     int updateCount
+    /** 最後の INSERT が返した採番キー。ドライバが返さないときは null */
+    Object generatedKey
     /** 実行した文の数 */
     int statementCount
     long elapsedMillis

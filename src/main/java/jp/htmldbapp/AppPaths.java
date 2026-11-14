@@ -40,23 +40,35 @@ public final class AppPaths {
     public Path keyFile() { return configDir.resolve("secret.key"); }
     public Path logFile() { return configDir.resolve("logs").resolve("app.log"); }
 
-    /** 画面フォルダが無ければサンプル「顧客管理」を作る。古い screens/ と sql/ があればそこへコピーする。 */
+    /** 画面フォルダが無ければサンプルを作る。古い screens/ と sql/ があれば「顧客管理」へコピーする。 */
     public void ensureWorkspace() throws IOException {
         Files.createDirectories(configDir);
         Files.createDirectories(driversDir());
         Path sample = home.resolve("顧客管理");
-        if (Files.isDirectory(sample)) return;
-        if (Files.isDirectory(screensDir()) || Files.isDirectory(sqlDir())) {
-            Files.createDirectories(sample.resolve("sql"));
-            copyFiles(screensDir(), sample);
-            copyFiles(sqlDir(), sample.resolve("sql"));
-            AppLog.info("screens/ と sql/ を 顧客管理/ にコピーしました");
-            return;
+        if (!Files.isDirectory(sample)) {
+            if (Files.isDirectory(screensDir()) || Files.isDirectory(sqlDir())) {
+                Files.createDirectories(sample.resolve("sql"));
+                copyFiles(screensDir(), sample);
+                copyFiles(sqlDir(), sample.resolve("sql"));
+                AppLog.info("screens/ と sql/ を 顧客管理/ にコピーしました");
+            } else {
+                extractIfMissing(sample, "samples/顧客管理/", new String[] {"customer.html", "identity.html", "style.css"});
+                extractIfMissing(sample.resolve("sql"), "samples/顧客管理/sql/",
+                        new String[] {"initSample.sql", "searchCustomer.sql", "saveCustomer.sql",
+                                "insertCustomer.sql", "updateCustomer.sql", "deleteCustomer.sql",
+                                "nextCustomerId.sql", "initTicket.sql", "searchTicket.sql",
+                                "insertTicket.sql", "updateTicket.sql", "deleteTicket.sql"});
+            }
         }
-        extractIfMissing(sample, "samples/顧客管理/", new String[] {"customer.html", "style.css"});
-        extractIfMissing(sample.resolve("sql"), "samples/顧客管理/sql/",
-                new String[] {"initSample.sql", "searchCustomer.sql", "saveCustomer.sql",
-                        "insertCustomer.sql", "updateCustomer.sql", "deleteCustomer.sql"});
+        extractCsvSample();
+    }
+
+    private void extractCsvSample() throws IOException {
+        Path dir = home.resolve("CSV編集");
+        extractIfMissing(dir, "samples/CSV編集/", new String[] {"items.html", "style.css", "items.csv"});
+        extractIfMissing(dir.resolve("sql"), "samples/CSV編集/sql/",
+                new String[] {"searchItem.sql", "insertItem.sql", "updateItem.sql", "deleteItem.sql",
+                        "nextItemId.sql"});
     }
 
     private static void copyFiles(Path from, Path to) throws IOException {

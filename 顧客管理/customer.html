@@ -53,7 +53,7 @@
   <fieldset id="customerForm">
     <legend>登録</legend>
     <!-- 検索の in_name / in_pref とぶつからないよう、名前と都道府県は newName / newPref -->
-    <div class="row"><label>顧客ID</label><input name="in_id" data-key type="number" data-type="int"></div>
+    <div class="row"><label>顧客ID</label><input name="in_id" data-key data-auto="nextCustomerId" type="number" data-type="int" placeholder="自動採番" disabled></div>
     <div class="row"><label>名前</label><input name="in_newName" size="28"></div>
     <div class="row"><label>都道府県</label><input name="in_newPref" size="20"></div>
     <div class="row"><label>メール</label><input name="in_email" type="email" size="30"></div>
@@ -63,7 +63,7 @@
       <button id="btn_saveCustomer" data-insert="insertCustomer" data-update="updateCustomer" data-then="searchCustomer">登録</button>
       <button type="button" class="secondary" data-clear="#customerForm">クリア</button>
     </div>
-    <p class="hint">「クリア」で新規入力に戻します。「編集」でその行を読み込み、顧客IDは変更できません。ボタンは「登録」と「更新」で切り替わります。</p>
+    <p class="hint">顧客IDは自動採番で、入力はできません。登録に成功するとボタンは「更新」になります。「クリア」で新規の登録に戻ります。</p>
   </fieldset>
 </body>
 </html>

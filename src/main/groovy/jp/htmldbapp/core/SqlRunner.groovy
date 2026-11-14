@@ -38,10 +38,19 @@ class SqlRunner {
         ExecResult result = new ExecResult()
         ExecResult lastQuery = null
         int totalUpdates = 0
+        Object generatedKey = null
         for (String stmt : statements) {
             Map<String, Object> bound = bindParams(stmt, params)
             if (SqlScript.isQuery(stmt)) {
                 lastQuery = runQuery(sql, stmt, bound)
+            } else if (isInsert(stmt)) {
+                List<List<Object>> keys = bound.isEmpty() ? sql.executeInsert(stmt) : sql.executeInsert(bound, stmt)
+                int count = keys == null ? 0 : keys.size()
+                // 採番キーを返さないドライバでも、成功した INSERT は 1 件として数える
+                if (count == 0) count = 1
+                totalUpdates += count
+                Object key = firstGenerated(keys)
+                if (key != null) generatedKey = key
             } else {
                 int count = bound.isEmpty() ? sql.executeUpdate(stmt) : sql.executeUpdate(bound, stmt)
                 totalUpdates += Math.max(count, 0)
@@ -49,9 +58,22 @@ class SqlRunner {
         }
         if (lastQuery != null) result = lastQuery
         result.updateCount = totalUpdates
+        result.generatedKey = generatedKey
         result.statementCount = statements.size()
         result.elapsedMillis = System.currentTimeMillis() - start
         result
+    }
+
+    private static boolean isInsert(String stmt) {
+        String s = SqlScript.stripComments(stmt).trim()
+        s.toUpperCase(Locale.ROOT).startsWith('INSERT')
+    }
+
+    private static Object firstGenerated(List<List<Object>> keys) {
+        if (keys == null || keys.isEmpty()) return null
+        List<Object> row = keys.get(keys.size() - 1)
+        if (row == null || row.isEmpty() || row.get(0) == null) return null
+        row.get(0)
     }
 
     /** 文中で使われているパラメータだけを取り出し、無いものは NULL で補う。 */

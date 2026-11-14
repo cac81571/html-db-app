@@ -123,6 +123,10 @@
         <directory>顧客管理</directory>
         <targetPath>samples/顧客管理</targetPath>
       </resource>
+      <resource>
+        <directory>CSV編集</directory>
+        <targetPath>samples/CSV編集</targetPath>
+      </resource>
     </resources>
 
     <plugins>
