@@ -118,14 +118,10 @@
       <resource>
         <directory>src/main/resources</directory>
       </resource>
-      <!-- 初回起動時に展開するサンプル（screens/ と sql/ をそのまま同梱） -->
+      <!-- 初回起動時に展開するサンプル（顧客管理/ をそのまま同梱） -->
       <resource>
-        <directory>screens</directory>
-        <targetPath>samples/screens</targetPath>
-      </resource>
-      <resource>
-        <directory>sql</directory>
-        <targetPath>samples/sql</targetPath>
+        <directory>顧客管理</directory>
+        <targetPath>samples/顧客管理</targetPath>
       </resource>
     </resources>
 

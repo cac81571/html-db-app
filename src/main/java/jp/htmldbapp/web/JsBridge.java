@@ -14,16 +14,24 @@ public class JsBridge {
     }
 
     private final Handler handler;
+    /** (画面ファイル名, 渡す値の JSON) */
+    private final BiConsumer<String, String> opener;
     private final BiConsumer<String, String> logger;
 
-    public JsBridge(Handler handler, BiConsumer<String, String> logger) {
+    public JsBridge(Handler handler, BiConsumer<String, String> opener, BiConsumer<String, String> logger) {
         this.handler = handler;
+        this.opener = opener;
         this.logger = logger;
     }
 
     /** JS: window.htmldbBridge.execute('searchCustomer', '{"params":{...}}', 'otherSql') */
     public void execute(String sqlName, String screenJson, String then) {
         handler.execute(sqlName, screenJson, then == null ? "" : then);
+    }
+
+    /** JS: window.htmldbBridge.openScreen('customerForm.html', '{"id":"1","name":"山田"}') */
+    public void openScreen(String fileName, String paramsJson) {
+        opener.accept(fileName, paramsJson == null ? "{}" : paramsJson);
     }
 
     /** JS: window.htmldbBridge.log('info', 'message') — 画面側からログ出力 */

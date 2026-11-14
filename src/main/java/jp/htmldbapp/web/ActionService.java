@@ -42,12 +42,16 @@ public class ActionService {
         }
     }
 
-    private final Path sqlDir;
+    private final Supplier<Path> sqlDir;
     private final ConnectionFactory connectionFactory;
     private final Supplier<ConnectionInfo> activeConnection;
     private final SqlRunner runner = new SqlRunner();
 
     public ActionService(Path sqlDir, ConnectionFactory connectionFactory, Supplier<ConnectionInfo> activeConnection) {
+        this(() -> sqlDir, connectionFactory, activeConnection);
+    }
+
+    public ActionService(Supplier<Path> sqlDir, ConnectionFactory connectionFactory, Supplier<ConnectionInfo> activeConnection) {
         this.sqlDir = sqlDir;
         this.connectionFactory = connectionFactory;
         this.activeConnection = activeConnection;
@@ -69,13 +73,16 @@ public class ActionService {
     public Result run(String sqlName, String screenJson) {
         try {
             String fileName = NamingRules.sqlFileName(sqlName);
-            Path file = sqlDir.resolve(fileName);
+            Path dir = sqlDir.get();
+            if (dir == null) return error("画面フォルダが選択されていません", null);
+            Path file = dir.resolve(fileName);
             if (!Files.isRegularFile(file)) {
                 return error("SQL ファイルが見つかりません: sql/" + fileName, null);
             }
             String sqlText = Files.readString(file, StandardCharsets.UTF_8);
             Map<String, Object> params = parseParams(screenJson);
-            AppLog.info("実行: sql/" + fileName + " パラメータ=" + params);
+            String folder = dir.getParent() == null ? "" : dir.getParent().getFileName() + "/";
+            AppLog.info("実行: " + folder + "sql/" + fileName + " パラメータ=" + params);
 
             ConnectionInfo info = activeConnection.get();
             try (Connection con = connectionFactory.open(info)) {
@@ -110,11 +117,18 @@ public class ActionService {
 
     private static Result error(String msg, Throwable t) {
         // SQL エラー・入力エラーは原因メッセージだけで十分なのでスタックトレースは出さない
+        // Windows の改行（CR）が画面上で文字化けした四角になるので、LF に揃える
+        msg = normalizeNewlines(msg);
         boolean expected = t == null || t instanceof IOException || t instanceof IllegalArgumentException
                 || t instanceof java.sql.SQLException;
         AppLog.error(msg, expected ? null : t);
         String html = "<div class=\"htmldb-error\">" + ResultRenderer.escape(msg) + "</div>";
         return new Result(false, html, msg, null);
+    }
+
+    private static String normalizeNewlines(String s) {
+        if (s == null) return "";
+        return s.replace("\r\n", "\n").replace('\r', '\n');
     }
 
     private static String rootMessage(Throwable e) {

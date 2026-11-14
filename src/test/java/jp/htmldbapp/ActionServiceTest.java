@@ -20,7 +20,7 @@ class ActionServiceTest {
     @Test
     void サンプルSQLで初期化_検索_登録_削除() {
         ConnectionInfo h2 = new ConnectionInfo("test", "jdbc:h2:mem:sample;DB_CLOSE_DELAY=-1", "sa", "", "");
-        ActionService svc = new ActionService(Paths.get("sql"), new ConnectionFactory(tmp), () -> h2);
+        ActionService svc = new ActionService(Paths.get("顧客管理/sql"), new ConnectionFactory(tmp), () -> h2);
 
         ActionService.Result init = svc.run("initSample", "{}");
         assertTrue(init.ok, init.message);
@@ -35,9 +35,9 @@ class ActionServiceTest {
         ActionService.Result tokyo = svc.run("searchCustomer", "{\"params\":{\"name\":\"\",\"pref\":\"東京都\"}}");
         assertEquals(2, tokyo.exec.getRows().size());
 
-        // 型指定付きの登録（id 空欄 → 自動採番、日付は date 型）
+        // 登録。日付は date 型
         ActionService.Result ins = svc.run("insertCustomer",
-                "{\"params\":{\"id\":\"\",\"newName\":\"伊藤 健\",\"newPref\":\"福岡県\",\"email\":\"\",\"joinedOn\":\"2026-11-14\"},"
+                "{\"params\":{\"id\":\"5\",\"newName\":\"伊藤 健\",\"newPref\":\"福岡県\",\"email\":\"\",\"joinedOn\":\"2026-11-14\"},"
                         + "\"types\":{\"id\":\"int\",\"joinedOn\":\"date\"}}");
         assertTrue(ins.ok, ins.message);
         assertEquals(1, ins.exec.getUpdateCount());
@@ -46,6 +46,17 @@ class ActionServiceTest {
         ActionService.Result ito = svc.run("searchCustomer", "{\"params\":{\"name\":\"伊藤\",\"pref\":\"\"}}");
         assertEquals(1, ito.exec.getRows().size());
         assertEquals(5, ((Number) ito.exec.getRows().get(0).get(0)).intValue());
+
+        // 顧客ID をキーに上書き
+        ActionService.Result upd = svc.run("updateCustomer",
+                "{\"params\":{\"id\":\"5\",\"newName\":\"伊藤 次郎\",\"newPref\":\"福岡県\",\"email\":\"jiro@example.com\",\"joinedOn\":\"2026-11-14\"},"
+                        + "\"types\":{\"id\":\"int\",\"joinedOn\":\"date\"}}");
+        assertTrue(upd.ok, upd.message);
+        assertEquals(1, upd.exec.getUpdateCount());
+
+        ActionService.Result renamed = svc.run("searchCustomer", "{\"params\":{\"name\":\"次郎\",\"pref\":\"\"}}");
+        assertEquals(1, renamed.exec.getRows().size());
+        assertEquals("伊藤 次郎", renamed.exec.getRows().get(0).get(1));
 
         ActionService.Result del = svc.run("deleteCustomer", "{\"params\":{\"id\":\"5\"},\"types\":{\"id\":\"int\"}}");
         assertEquals(1, del.exec.getUpdateCount());

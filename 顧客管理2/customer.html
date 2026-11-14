@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>顧客管理</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>顧客管理2</h1>
+
+  <!-- メッセージ表示欄: id="msg" -->
+  <div id="msg"></div>
+
+  <fieldset>
+    <legend>準備</legend>
+    <!-- btn_initSample → sql/initSample.sql（テーブル作成とサンプルデータ投入） -->
+    <button id="btn_initSample" data-then="searchCustomer">サンプルテーブルを作成</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>検索</legend>
+    <!-- 検索条件。登録欄の名前・都道府県とは別名（in_name / in_pref）にして衝突を避ける -->
+    <label>名前</label><input name="in_name" placeholder="部分一致（空欄で全件）">
+    <label>都道府県</label>
+    <select name="in_pref">
+      <option value="">（すべて）</option>
+      <option>東京都</option>
+      <option>大阪府</option>
+      <option>愛知県</option>
+      <option>福岡県</option>
+    </select>
+    <button id="btn_searchCustomer">検索</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>一覧</legend>
+    <!--
+      data-fields … 行の「編集」で、列の値を下の name="in_項目" に入れる
+      data-row-edit … 各行の先頭に「編集」（値はスクロール先）
+      data-row-delete … となりに「削除」。その行の値で sql/deleteCustomer.sql を実行
+      data-row-then … 削除のあと一覧を同じ検索条件で再表示
+    -->
+    <div id="out_searchCustomer"
+         data-fields="顧客ID=id,名前=newName,都道府県=newPref,メール=email,登録日=joinedOn"
+         data-row-edit="#customerForm"
+         data-row-delete="deleteCustomer"
+         data-row-then="searchCustomer"
+         data-row-confirm="この顧客を削除します。よろしいですか？">（検索ボタンを押してください）</div>
+  </fieldset>
+
+  <div id="out_saveCustomer"></div>
+
+  <fieldset id="customerForm">
+    <legend>登録</legend>
+    <!-- 検索の in_name / in_pref とぶつからないよう、名前と都道府県は newName / newPref -->
+    <div class="row"><label>顧客ID</label><input name="in_id" data-key type="number" data-type="int"></div>
+    <div class="row"><label>名前</label><input name="in_newName" size="28"></div>
+    <div class="row"><label>都道府県</label><input name="in_newPref" size="20"></div>
+    <div class="row"><label>メール</label><input name="in_email" type="email" size="30"></div>
+    <div class="row"><label>登録日</label><input name="in_joinedOn" type="date"></div>
+    <div class="actions">
+      <!-- 初期は「登録」→ insertCustomer.sql。編集後は「更新」→ updateCustomer.sql -->
+      <button id="btn_saveCustomer" data-insert="insertCustomer" data-update="updateCustomer" data-then="searchCustomer">登録</button>
+      <button type="button" class="secondary" data-clear="#customerForm">クリア</button>
+    </div>
+    <p class="hint">「クリア」で新規入力に戻します。「編集」でその行を読み込み、顧客IDは変更できません。ボタンは「登録」と「更新」で切り替わります。</p>
+  </fieldset>
+</body>
+</html>

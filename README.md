@@ -3,7 +3,7 @@
 **画面は HTML、処理は SQL を書くだけ** で動く、デスクトップ用の Web DB アプリです。
 
 - 技術: Java 17+ / Groovy 4 / Maven / Swing + FlatLaf / JavaFX WebView（Swing に JFXPanel で埋め込み）
-- 利用者は `screens/` に HTML、`sql/` に SQL を置くだけ。Java のコードを書く必要はありません。
+- 利用者は画面フォルダ（例: `顧客管理/`）に HTML、その中の `sql/` に SQL を置くだけ。Java のコードを書く必要はありません。
 - 画面項目と SQL パラメータは **ネーミングルール** で自動的に結び付きます。
 
 ---
@@ -37,6 +37,18 @@ SELECT * FROM customer WHERE id = :customerId
 | `data-type="int"` | 入力値の型。`int` / `number` / `date` / `datetime` / `time` / `bool` / `string`。`<input type="number">`→number、`type="date"`→date は自動 |
 | `data-then="searchCustomer"` | 成功したら続けて `sql/searchCustomer.sql` を実行（カンマ区切りで複数可）。登録後に一覧を更新する時に便利 |
 | `data-confirm="削除しますか？"` | 実行前に確認ダイアログを表示 |
+| `data-open="customerForm.html"` | その HTML 画面を開く（`id` が `btn_` ではないボタン）。SQL は実行しない |
+| `data-from="out_searchCustomer"` | 開くとき、その結果欄で選択している行の値を渡す |
+| `data-fields="顧客ID=id,名前=newName"` | 結果の列名を、同じ画面の `name="in_id"` などに対応付ける |
+| `data-row-edit="#customerForm"` | 各行の先頭に「編集」。押すと `data-fields` の対応で入力欄へ入れる（値はスクロール先） |
+| `data-row-delete="deleteCustomer"` | となりに「削除」。その行の値で SQL を実行する |
+| `data-row-then="searchCustomer"` | 行の削除が成功したあとに続けて実行する |
+| `data-row-confirm="削除しますか？"` | 行を削除する前の確認 |
+| `data-clear="#customerForm"` | その要素の中にある `in_*` を空にする。キーは入力可に戻り、ボタンは「登録」 |
+| `data-key` | キー項目。ラベルに ＊ を付ける。編集中は変更不可。空欄なら登録結果と同じ位置に「必須です」と出す |
+| `data-insert="insertCustomer"` | 登録モードで実行する SQL。ボタン文言は「登録」 |
+| `data-update="updateCustomer"` | 更新モードで実行する SQL。ボタン文言は「更新」 |
+| `data-keep`（`<body>`） | 別画面へ移る直前の入力値・結果・選択行を覚え、戻ったときにそのまま表示する。F5（再読込）では破棄する |
 
 ### バインドの細かいルール
 
@@ -54,10 +66,29 @@ SELECT * FROM customer WHERE id = :customerId
 - 画面の JavaScript から `window.__htmldb.run('searchCustomer')` で直接実行することもできます。
   実行完了時には `document` に `htmldb:done` イベント（`detail: {name, ok, message}`）が飛びます。
 
+### 一覧と登録を同じ画面に置く
+
+サンプルの `customer.html` は、上に一覧、下に登録です。このアプリは画面を1枚ずつ表示するので、上下に並べて見せるときは1つの HTML にまとめます。
+
+検索条件と登録項目は別の名前にします。同じ `in_name` が2つあると、ボタンを押したときに後の値で上書きされます。サンプルでは検索が `in_name`、登録の名前が `in_newName` です。
+
+```html
+<div id="out_searchCustomer"
+     data-fields="顧客ID=id,名前=newName,都道府県=newPref,メール=email,登録日=joinedOn"
+     data-row-edit="#customerForm"
+     data-row-delete="deleteCustomer"
+     data-row-then="searchCustomer"
+     data-row-confirm="この顧客を削除します。よろしいですか？"></div>
+```
+
+「編集」はその行の値を下の入力欄へ入れます。キー項目（`data-key`）のラベルには ＊ が付き、編集中は変更できません。空欄や登録の失敗は、登録パネルの上に1か所だけ出ます。ボタンは「更新」になり `sql/updateCustomer.sql` を実行します。「クリア」で「登録」に戻り、`sql/insertCustomer.sql` を実行します。
+
+別の HTML へ移すときは、`btn_` ではないボタンに `data-open="別画面.html"` を付けます。`<body data-keep>` を付けると、離れる前の入力と結果を覚えて、戻ったときに復元します。
+
 ### 結果表示の CSS クラス
 
 `table.htmldb-result`（結果表）、`td.htmldb-null`（NULL セル）、`.htmldb-count`（件数）、`.htmldb-update`（更新件数）、
-`.htmldb-error`（エラー）、`#msg.htmldb-msg-ok` / `#msg.htmldb-msg-error`（メッセージ）。サンプルの `screens/style.css` を参照してください。
+`.htmldb-error`（エラー）、`#msg.htmldb-msg-ok` / `#msg.htmldb-msg-error`（メッセージ）。サンプルの `顧客管理/style.css` を参照してください。
 
 ---
 
@@ -100,27 +131,29 @@ java -jar target\htmldbapp-1.0.0-all.jar
 
 ### 初めて起動したら
 
-1. 左の画面一覧から `customer.html` を選択（最初は自動で選ばれます）。
+1. 左の「プロジェクトフォルダ」は、最初は起動したフォルダです。ツリーはその直下の画面フォルダ（`顧客管理` など）から表示します。フォルダの入れ子は、画面フォルダのグループになります。`customer.html` は自動で開きます。
 2. 接続先が「サンプル H2」になっていることを確認（DB は `%USERPROFILE%\.htmldbapp\sample.mv.db` に作られます）。
 3. 「サンプルテーブルを作成」ボタン → テーブル作成・データ投入・検索まで実行されます。
-4. 検索・登録・削除を試してみてください。
+4. 下の欄に入力して「登録」で保存します。行の「編集」でその顧客を読み込むと、顧客IDは変更できず、ボタンは「更新」になります。行の「削除」で消せます。欄を空にするときは「クリア」です。
 
-`screens/` の HTML や `sql/` の SQL を編集したら、**F5（再読込）** で反映されます（SQL は毎回ファイルから読むので再読込不要）。
+画面フォルダの HTML や `sql/` の SQL を編集したら、**F5（再読込）** で反映されます（SQL は毎回ファイルから読むので再読込不要）。「追加」「削除」はプロジェクトフォルダへの参照だけを増やしたり外したりします。フォルダ自体は作りませんし、消しません。選んだプロジェクトのルート名はツリーに出さず、中のフォルダから表示します。フォルダは何階層でも置けます。画面フォルダをクリックすると、その中の HTML を表示します。HTML が複数あるときは、ツリーの先頭のファイルです。「絞り込み」に文字を入れるとファイル名で絞れ、Esc で解除します。「全て展開」「全て折りたたむ」でツリーの開閉ができます。フォルダを右クリックするとエクスプローラで開けます。ファイルを右クリックすると、外部エディタまたはサクラエディタで開けます。サクラエディタの場所は「ツール → サクラエディタのパス...」で指定できます。SQL のダブルクリックは外部エディタです。
 
 ---
 
 ## 3. フォルダ構成
 
 ```
-htmldbapp/
-├─ screens/            … 画面 HTML（ここに .html を追加すると一覧に出ます）。CSS・画像も置けます
-│   ├─ customer.html
-│   └─ style.css
-├─ sql/                … SQL（ボタン名 = ファイル名）
-│   ├─ initSample.sql
-│   ├─ searchCustomer.sql
-│   ├─ insertCustomer.sql
-│   └─ deleteCustomer.sql
+プロジェクトフォルダ/      … 左の一覧に追加したフォルダ（初期値は起動したフォルダ）
+├─ 顧客管理/           … 画面フォルダ
+│   ├─ customer.html       … 一覧と登録
+│   ├─ style.css
+│   └─ sql/                … この画面の SQL（ボタン名 = ファイル名）
+│       ├─ initSample.sql
+│       ├─ searchCustomer.sql
+│       ├─ saveCustomer.sql    … 登録／更新
+│       ├─ insertCustomer.sql
+│       ├─ updateCustomer.sql
+│       └─ deleteCustomer.sql
 ├─ drivers/            … 追加 JDBC ドライバの JAR 置き場（再ビルド不要）
 ├─ dist/               … ビルド済み Windows 用 JAR
 ├─ src/main/java       … Swing 画面・接続管理・WebView ブリッジ（Java）
@@ -132,9 +165,9 @@ htmldbapp/
 └─ README.md
 ```
 
-作業フォルダ（`screens/` `sql/` `drivers/`）は **起動したカレントディレクトリ** です。
+作業フォルダ（初期のプロジェクトフォルダ。画面フォルダと `drivers/` がある場所）は **起動したカレントディレクトリ** です。
 `java -Dhtmldbapp.home=D:\myapp -jar ...` で変更できます。
-`screens/` や `sql/` が無いフォルダで起動すると、サンプルが自動で展開されます。
+画面フォルダが無い状態で起動すると、サンプル「顧客管理」が自動で展開されます。古い `screens/` と `sql/` がある場合は「顧客管理」へコピーします。
 
 設定は `%USERPROFILE%\.htmldbapp\` に保存されます（`-Dhtmldbapp.config=...` で変更可）。
 
@@ -143,6 +176,9 @@ htmldbapp/
 | `connections.json` | 接続先一覧（パスワードは AES-256-GCM で暗号化） |
 | `secret.key` | 暗号鍵（初回起動時に自動生成。**削除すると保存済みパスワードは復号できなくなります**） |
 | `logs/app.log` | 実行ログ（SQL・パラメータ・エラー） |
+| `sakura-path.txt` | サクラエディタ (`sakura.exe`) のパス。未設定なら自動検出 |
+| `projects.txt` | 追加したプロジェクトフォルダのパス。未作成のときは起動フォルダだけ |
+| `last-folder.txt` | 最後に選んだプロジェクトフォルダ |
 
 ---
 
@@ -189,7 +225,7 @@ java -jar target/htmldbapp-1.0.0-all.jar --smoke-test   # サンプル画面で�
 ## 7. 制限事項（MVP）
 
 - SQL 実行のたびに接続を開閉します（コネクションプールなし）。トランザクションは自動コミット（複数文ファイルも 1 文ずつコミット）。
-- 結果の表示形式は表のみ（行クリックで入力欄へ反映、ページングなどは未対応）。
+- 結果の表示形式は表のみ（ページングは未対応）。行ごとの「編集」「削除」は `data-row-edit` / `data-row-delete`、別画面への移動は `data-open` で行います。
 - 型指定のない値は文字列としてバインドされます。PostgreSQL など型に厳しい DB では `data-type` を付けるか SQL 側で `CAST` してください。
 - ストアドプロシージャの OUT パラメータ、BLOB の表示・登録は未対応です。
 - `secret.key` と `connections.json` の両方を持ち出されるとパスワードは復号できます（OS ログインユーザー単位の保護です）。

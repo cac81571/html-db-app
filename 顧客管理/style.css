@@ -1,0 +1,48 @@
+/* サンプル画面用スタイル（自由に変更してください） */
+body { font-family: "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif; margin: 20px; color: #222; background: #fafafa; }
+h1 { font-size: 20px; border-left: 6px solid #2675bf; padding-left: 8px; }
+fieldset { border: 1px solid #ccd; border-radius: 6px; margin-bottom: 16px; background: #fff; }
+legend { font-weight: bold; color: #2675bf; }
+label { display: inline-block; min-width: 80px; }
+.htmldb-key-mark { color: #c0392b; margin-left: 2px; }
+.htmldb-readonly,
+input[readonly],
+select:disabled,
+textarea[readonly] { background: #eee; color: #333; }
+input, select, textarea { padding: 4px 6px; margin: 4px 8px 4px 0; border: 1px solid #bbb; border-radius: 4px; }
+button { padding: 5px 14px; margin: 0 6px 0 0; border: none; border-radius: 4px; background: #2675bf; color: #fff; cursor: pointer; }
+button:hover { background: #1d5d99; }
+button.secondary { background: #5c6b7a; }
+button.secondary:hover { background: #3e4c58; }
+button.danger { background: #c0392b; }
+button.danger:hover { background: #962d22; }
+.hint { color: #666; font-size: 12px; margin: 8px 0; }
+.row { margin: 2px 0; }
+.actions { margin-top: 10px; }
+button.small { padding: 2px 8px; font-size: 12px; }
+td.htmldb-actions, th.htmldb-actions { white-space: nowrap; width: 1%; }
+button[data-htmldb-busy] { opacity: .5; }
+#msg { margin: 8px 0; padding: 6px 10px; border-radius: 4px; min-height: 1.2em; }
+.htmldb-msg-ok { background: #e7f4e7; color: #256029; }
+.htmldb-msg-error { background: #fdecea; color: #b71c1c; white-space: pre-wrap; }
+table.htmldb-result { border-collapse: collapse; margin-top: 8px; background: #fff; }
+table.htmldb-result th, table.htmldb-result td { border: 1px solid #ccc; padding: 4px 10px; }
+table.htmldb-result th { background: #eef3fa; }
+td.htmldb-null { color: #aaa; font-style: italic; }
+[data-fields] table.htmldb-result tbody tr,
+[data-open] table.htmldb-result tbody tr { cursor: pointer; }
+[data-fields] table.htmldb-result tbody tr:hover td,
+[data-open] table.htmldb-result tbody tr:hover td { background: #e7f0fa; }
+[data-fields] table.htmldb-result tbody tr.htmldb-selected td,
+[data-open] table.htmldb-result tbody tr.htmldb-selected td,
+[data-fields] table.htmldb-result tbody tr.htmldb-selected:hover td,
+[data-open] table.htmldb-result tbody tr.htmldb-selected:hover td { background: #cfe3f7; }
+.htmldb-count { color: #666; font-size: 12px; margin-top: 4px; }
+#out_saveCustomer:not(:empty) { margin: 0 0 8px; }
+#out_saveCustomer .htmldb-update,
+#out_saveCustomer .htmldb-error {
+  padding: 6px 10px; border-radius: 4px; font-size: 14px; margin: 0;
+}
+#out_saveCustomer .htmldb-update { background: #e7f4e7; color: #256029; }
+#out_saveCustomer .htmldb-error { background: #fdecea; color: #b71c1c; white-space: pre-wrap; }
+.htmldb-error { color: #b71c1c; white-space: pre-wrap; }

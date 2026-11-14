@@ -9,7 +9,7 @@ import java.nio.file.Paths;
 /**
  * アプリが使うフォルダの場所。
  * <ul>
- *   <li>作業フォルダ（screens/, sql/, drivers/）: システムプロパティ htmldbapp.home、未指定ならカレントディレクトリ</li>
+ *   <li>作業フォルダ（画面フォルダ/ と drivers/）: システムプロパティ htmldbapp.home、未指定ならカレントディレクトリ</li>
  *   <li>設定フォルダ（connections.json, secret.key, logs/）: システムプロパティ htmldbapp.config、未指定なら ~/.htmldbapp</li>
  * </ul>
  */
@@ -40,13 +40,34 @@ public final class AppPaths {
     public Path keyFile() { return configDir.resolve("secret.key"); }
     public Path logFile() { return configDir.resolve("logs").resolve("app.log"); }
 
-    /** screens/ や sql/ が無ければ、JAR 内のサンプルを展開して作成する。 */
+    /** 画面フォルダが無ければサンプル「顧客管理」を作る。古い screens/ と sql/ があればそこへコピーする。 */
     public void ensureWorkspace() throws IOException {
         Files.createDirectories(configDir);
         Files.createDirectories(driversDir());
-        extractIfMissing(screensDir(), "samples/screens/", new String[] {"customer.html", "style.css"});
-        extractIfMissing(sqlDir(), "samples/sql/",
-                new String[] {"initSample.sql", "searchCustomer.sql", "insertCustomer.sql", "deleteCustomer.sql"});
+        Path sample = home.resolve("顧客管理");
+        if (Files.isDirectory(sample)) return;
+        if (Files.isDirectory(screensDir()) || Files.isDirectory(sqlDir())) {
+            Files.createDirectories(sample.resolve("sql"));
+            copyFiles(screensDir(), sample);
+            copyFiles(sqlDir(), sample.resolve("sql"));
+            AppLog.info("screens/ と sql/ を 顧客管理/ にコピーしました");
+            return;
+        }
+        extractIfMissing(sample, "samples/顧客管理/", new String[] {"customer.html", "style.css"});
+        extractIfMissing(sample.resolve("sql"), "samples/顧客管理/sql/",
+                new String[] {"initSample.sql", "searchCustomer.sql", "saveCustomer.sql",
+                        "insertCustomer.sql", "updateCustomer.sql", "deleteCustomer.sql"});
+    }
+
+    private static void copyFiles(Path from, Path to) throws IOException {
+        if (!Files.isDirectory(from)) return;
+        Files.createDirectories(to);
+        try (var s = Files.list(from)) {
+            for (Path p : s.filter(Files::isRegularFile).toList()) {
+                Path dest = to.resolve(p.getFileName());
+                if (!Files.exists(dest)) Files.copy(p, dest);
+            }
+        }
     }
 
     private void extractIfMissing(Path dir, String resourcePrefix, String[] files) throws IOException {
