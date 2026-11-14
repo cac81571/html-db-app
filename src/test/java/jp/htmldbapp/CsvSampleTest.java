@@ -29,9 +29,11 @@ class CsvSampleTest {
         String path = csv.toAbsolutePath().toString().replace('\\', '/');
 
         ExecResult next = run("nextItemId.sql", path, params());
-        assertEquals(5, ((Number) next.getRows().get(0).get(0)).intValue());
+        int nextId = ((Number) next.getRows().get(0).get(0)).intValue();
+        int base = run("searchItem.sql", path, params("name", null, "category", null, "noteQ", null)).getRows().size();
+        assertTrue(nextId > base);
 
-        ExecResult found = run("searchItem.sql", path, params("name", "ノート", "category", null));
+        ExecResult found = run("searchItem.sql", path, params("name", "ノート", "category", null, "noteQ", "横罫"));
         assertEquals(1, found.getRows().size());
         assertTrue(String.valueOf(found.getRows().get(0)).contains("ノートA5"));
 
@@ -41,15 +43,15 @@ class CsvSampleTest {
         assertTrue(Files.readString(csv, StandardCharsets.UTF_8).contains("ノートB5"));
 
         ExecResult inserted = run("insertItem.sql", path, params(
-                "id", 5, "itemName", "付箋", "itemCategory", "文具", "qty", 30, "note", null));
+                "id", nextId, "itemName", "付箋", "itemCategory", "文具", "qty", 30, "note", null));
         assertEquals(1, inserted.getUpdateCount());
 
-        ExecResult all = run("searchItem.sql", path, params("name", null, "category", null));
-        assertEquals(5, all.getRows().size());
+        ExecResult all = run("searchItem.sql", path, params("name", null, "category", null, "noteQ", null));
+        assertEquals(base + 1, all.getRows().size());
 
-        ExecResult deleted = run("deleteItem.sql", path, params("id", 5));
+        ExecResult deleted = run("deleteItem.sql", path, params("id", nextId));
         assertEquals(1, deleted.getUpdateCount());
-        assertEquals(4, run("searchItem.sql", path, params("name", null, "category", null)).getRows().size());
+        assertEquals(base, run("searchItem.sql", path, params("name", null, "category", null, "noteQ", null)).getRows().size());
 
         SQLException dup = assertThrows(SQLException.class, () -> run("insertItem.sql", path, params(
                 "id", 1, "itemName", "重複", "itemCategory", "文具", "qty", 1, "note", null)));

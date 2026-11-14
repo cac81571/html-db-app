@@ -42,12 +42,21 @@ class SqlRunnerTest {
 
     @Test
     void 名前付きパラメータでINSERTとSELECT() {
+        List<String> sqlLog = new ArrayList<>();
+        runner.setLog(new groovy.lang.Closure<Void>(this) {
+            @SuppressWarnings("unused")
+            public Void doCall(String m) {
+                sqlLog.add(m);
+                return null;
+            }
+        });
         Map<String, Object> p = new HashMap<>();
         p.put("id", 1L);
         p.put("name", "りんご<&>");
         ExecResult ins = runner.execute(con, "INSERT INTO item(id, name) VALUES (:id, :name)", p);
         assertFalse(ins.isQuery());
         assertEquals(1, ins.getUpdateCount());
+        assertTrue(sqlLog.stream().anyMatch(s -> s.contains("INSERT INTO item") && s.contains("りんご<&>")));
 
         ExecResult sel = runner.execute(con, "SELECT id, name, memo FROM item WHERE name = :name OR id = :id", p);
         assertTrue(sel.isQuery());

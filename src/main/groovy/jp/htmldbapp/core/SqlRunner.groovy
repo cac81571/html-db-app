@@ -21,6 +21,9 @@ class SqlRunner {
     /** 警告ログの出力先（UI から差し替え可能） */
     Closure<Void> warn = { String msg -> System.err.println(msg); null } as Closure<Void>
 
+    /** 実行した SQL の出力先。未設定なら出さない */
+    Closure<Void> log = { String msg -> null } as Closure<Void>
+
     /**
      * SQL テキスト（複数文可）を実行する。
      * 複数文の場合は順に実行し、最後の SELECT の結果（なければ合計更新件数）を返す。
@@ -41,6 +44,7 @@ class SqlRunner {
         Object generatedKey = null
         for (String stmt : statements) {
             Map<String, Object> bound = bindParams(stmt, params)
+            log.call(sqlLog(stmt, bound))
             if (SqlScript.isQuery(stmt)) {
                 lastQuery = runQuery(sql, stmt, bound)
             } else if (isInsert(stmt)) {
@@ -74,6 +78,15 @@ class SqlRunner {
         List<Object> row = keys.get(keys.size() - 1)
         if (row == null || row.isEmpty() || row.get(0) == null) return null
         row.get(0)
+    }
+
+    private static String sqlLog(String stmt, Map<String, Object> bound) {
+        StringBuilder sb = new StringBuilder('SQL:\n')
+        sb.append(stmt.trim())
+        if (bound != null && !bound.isEmpty()) {
+            sb.append('\nパラメータ=').append(bound)
+        }
+        sb.toString()
     }
 
     /** 文中で使われているパラメータだけを取り出し、無いものは NULL で補う。 */

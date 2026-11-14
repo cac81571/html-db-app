@@ -62,6 +62,13 @@ public class ActionService {
                 return null;
             }
         });
+        runner.setLog(new groovy.lang.Closure<Void>(this) {
+            @SuppressWarnings("unused")
+            public Void doCall(String msg) {
+                AppLog.info(msg);
+                return null;
+            }
+        });
     }
 
     public SqlRunner getRunner() { return runner; }

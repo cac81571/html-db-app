@@ -12,14 +12,19 @@
 
   <fieldset>
     <legend>検索</legend>
-    <label>品名</label><input name="in_name" placeholder="部分一致（空欄で全件）">
-    <label>分類</label>
-    <select name="in_category">
-      <option value="">（すべて）</option>
-      <option>文具</option>
-      <option>食品</option>
-      <option>雑貨</option>
-    </select>
+    <div>
+	    <label>品名</label><input name="in_name" placeholder="部分一致（空欄で全件）">
+	    <label>分類</label>
+	    <select name="in_category">
+	      <option value="">（すべて）</option>
+	      <option>文具</option>
+	      <option>食品</option>
+	      <option>雑貨</option>
+	    </select>
+	</div>
+	<div>
+	    <label>メモ</label><input name="in_noteQ" placeholder="部分一致（空欄で全件）">
+	</div>
     <button id="btn_searchItem">検索</button>
     <p class="hint">データは起動フォルダの <code>CSV編集/items.csv</code>（UTF-8）です。H2 の CSVREAD で検索し、登録・更新・削除は CSVWRITE で同じファイルへ書き戻します。データベースに表は作りません。</p>
   </fieldset>
