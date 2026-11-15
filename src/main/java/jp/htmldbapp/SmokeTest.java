@@ -1,5 +1,8 @@
 package jp.htmldbapp;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
 import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +43,20 @@ final class SmokeTest {
                 AppLog.info("[smoke] msg=" + msg);
                 AppLog.info("[smoke] 結果:\n" + text);
                 if (text.contains("山田")) {
+                    String savedClip = clipboardText();
+                    boolean restoreClip = false;
+                    try {
+                        eval(sp, "document.querySelector('#out_searchCustomer table.htmldb-result tbody tr td:nth-child(3)').click(); true");
+                        restoreClip = true;
+                        waitUntil(() -> "山田 太郎".equals(clipboardText()), 10);
+                        String copyMsg = String.valueOf(eval(sp, "document.getElementById('msg').textContent"));
+                        if (copyMsg.contains("コピーしました")) {
+                            throw new IllegalStateException("コピーメッセージが出ています: " + copyMsg);
+                        }
+                        AppLog.info("[smoke] セルコピー: 山田 太郎");
+                    } finally {
+                        if (restoreClip) setClipboard(savedClip == null ? "" : savedClip);
+                    }
                     String mark = String.valueOf(eval(sp,
                             "(function(){var lb=document.querySelector('#customerForm .row label');return lb?lb.textContent:'';})()"));
                     if (mark.contains("＊")) throw new IllegalStateException("自動採番に ＊ が付いています: " + mark);
@@ -99,6 +116,21 @@ final class SmokeTest {
                                 && !place.substring(split).contains("の実行でエラー");
                     }, 30);
                     AppLog.info("[smoke] 登録エラー: 登録パネルの上だけ");
+                    eval(sp, "document.querySelector('#out_searchCustomer button[data-row-action=\"edit\"]').click(); true");
+                    waitUntil(() -> "1|山田 太郎".equals(String.valueOf(eval(sp,
+                            "(function(){function g(n){var e=document.querySelector('[name=\"'+n+'\"]');return e?e.value:'';}"
+                                    + "return g('in_id')+'|'+g('in_newName');})()"))), 30);
+                    eval(sp, "(function(){window.confirm=function(){return true;};"
+                            + "document.querySelector('#out_searchCustomer button[data-row-action=\"delete\"]').click();return true;})()");
+                    waitUntil(() -> {
+                        String form = String.valueOf(eval(sp,
+                                "(function(){function g(n){var e=document.querySelector('[name=\"'+n+'\"]');return e?e.value:'';}"
+                                        + "var b=document.querySelector('#customerForm button[data-insert]');"
+                                        + "return g('in_id')+'|'+g('in_newName')+'|'+(b?b.textContent:'');})()"));
+                        String list = String.valueOf(eval(sp, "document.getElementById('out_searchCustomer').innerText"));
+                        return "||登録".equals(form) && !list.contains("山田");
+                    }, 30);
+                    AppLog.info("[smoke] 削除: 登録欄を空にしました");
                     Path items = Path.of("sample_project", "CSV編集", "items.html").toAbsolutePath().normalize();
                     sp.showScreen(items);
                     waitUntil(() -> sp.isReady() && sp.getCurrentFile() != null
@@ -155,6 +187,22 @@ final class SmokeTest {
             Thread.currentThread().interrupt();
         }
         return ref.get();
+    }
+
+    private static String clipboardText() {
+        try {
+            var cb = Toolkit.getDefaultToolkit().getSystemClipboard();
+            if (cb.isDataFlavorAvailable(DataFlavor.stringFlavor)) {
+                return String.valueOf(cb.getData(DataFlavor.stringFlavor));
+            }
+        } catch (Exception ignore) {
+            return null;
+        }
+        return null;
+    }
+
+    private static void setClipboard(String text) {
+        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
     }
 
     private static void waitUntil(java.util.function.BooleanSupplier cond, int seconds) throws Exception {

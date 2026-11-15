@@ -2,6 +2,7 @@
  * HTML DB App: 画面配線スクリプト（ページ読込完了時にアプリが自動注入します）
  *  - id="btn_xxx" の要素がクリックされたら、name="in_*" の全項目を集めて sql/xxx.sql を実行
  *  - 結果は id="out_xxx" に、メッセージは id="msg" に表示
+ *  - 一覧テーブルのセルをクリックすると、その表示値をクリップボードへコピーする
  *  - data-then="yyy"  : 成功後に sql/yyy.sql も続けて実行（カンマ区切りで複数可）
  *  - data-type="int"  : 入力値の型（int / number / date / datetime / time / bool / string）
  *  - data-confirm="..." : 実行前に確認ダイアログを表示（キャンセルで中止）
@@ -9,7 +10,8 @@
  *  - data-from="out_xxx"   : 開くとき、その結果欄で選択中の行の値を渡す
  *  - data-fields="列名=項目,..." : 結果の列を、同じ画面の name="in_項目" に対応付ける
  *  - data-row-edit="#id"  : 各行の先頭に「編集」。押すと data-fields の対応で入力欄へ入れる
- *  - data-row-delete="名前" : となりに「削除」。その行の値で sql/名前.sql を実行
+ *  - data-row-delete="名前" : となりに「削除」。その行の値で sql/名前.sql を実行。
+ *    成功し、登録フォームのキーが削除した行と同じなら、そのフォームを空にして登録モードに戻す
  *  - data-row-then="名前"  : 行の削除が成功したあとに続けて実行
  *  - data-row-confirm="..." : 行削除の前の確認
  *  - data-clear="#id"      : その要素の中の in_* を空にして、そこへスクロールする。登録モードに戻す
@@ -247,6 +249,8 @@
 
   /** Java から呼ばれる: 結果を out_xxx に表示。out_xxx があれば true を返す */
   H.done = function (name, ok, html, message, generatedKey) {
+    var deleted = takePendingDelete(name);
+    if (ok && deleted) clearDeletedForm(deleted);
     var shown = H.outputAlias[name] || name;
     var btn = document.getElementById('btn_' + shown) || document.getElementById('btn_' + name);
     if (btn) { btn.removeAttribute('data-htmldb-busy'); }
@@ -338,6 +342,8 @@
       if (Object.prototype.hasOwnProperty.call(row, k)) data.params[k] = row[k];
     }
     if (row.id) data.types.id = 'int';
+    if (!H.pendingDeletes) H.pendingDeletes = [];
+    H.pendingDeletes.push({ sql: sql, form: host.getAttribute('data-row-edit') || '', row: row });
     var thenName = host.getAttribute('data-row-then') || '';
     if (thenName && !/^[A-Za-z0-9_\-, ]+$/.test(thenName)) thenName = '';
     H.msg(sql + ' を実行中...', false);
@@ -361,10 +367,7 @@
       e.preventDefault();
       var root = document.querySelector(clearBtn.getAttribute('data-clear'));
       if (!root) return;
-      var inputs = root.querySelectorAll('[name^="in_"]');
-      for (var i = 0; i < inputs.length; i++) {
-        if (typeof inputs[i].value !== 'undefined') inputs[i].value = '';
-      }
+      clearForm(root);
       if (root.scrollIntoView) {
         try { root.scrollIntoView({ block: 'nearest' }); }
         catch (err) { root.scrollIntoView(); }
@@ -374,8 +377,6 @@
         var focusEl = root.querySelector('[name="' + focusName + '"]');
         if (focusEl && focusEl.focus) focusEl.focus();
       }
-      setEntryMode(root, 'insert');
-      clearEntryMessage(root);
       return;
     }
     var btn = ancestor(e.target, function (n) { return n.id && n.id.indexOf('btn_') === 0; });
@@ -402,9 +403,37 @@
       H.open(openBtn.getAttribute('data-open'), params);
       return;
     }
+    var cell = resultCell(e.target);
+    if (cell) copyCell(cell);
   }, true);
 
   document.addEventListener('submit', function (e) { e.preventDefault(); }, true);
+
+  /** 一覧の値セル。操作列と「該当なし」はコピーしない */
+  function resultCell(node) {
+    var cell = ancestor(node, function (n) { return tagOf(n) === 'td'; });
+    if (!cell) return null;
+    var table = ancestor(cell, function (n) { return tagOf(n) === 'table'; });
+    if (!table || (table.className || '').indexOf('htmldb-result') < 0) return null;
+    var cls = ' ' + (cell.className || '') + ' ';
+    if (cls.indexOf(' htmldb-actions ') >= 0 || cls.indexOf(' htmldb-empty ') >= 0) return null;
+    return cell;
+  }
+
+  function copyCell(cell) {
+    var text = cell.textContent == null ? '' : cell.textContent;
+    if (window.htmldbBridge && window.htmldbBridge.copy) window.htmldbBridge.copy(text);
+  }
+
+  function installCopyCursor() {
+    if (document.getElementById('htmldb-copy-style')) return;
+    var style = document.createElement('style');
+    style.id = 'htmldb-copy-style';
+    style.textContent = 'table.htmldb-result tbody td{cursor:copy}'
+        + 'table.htmldb-result tbody td.htmldb-actions,'
+        + 'table.htmldb-result tbody td.htmldb-empty{cursor:default}';
+    if (document.head) document.head.appendChild(style);
+  }
 
   function addClass(el, name) {
     if (!el) return;
@@ -572,6 +601,52 @@
     if (out) out.innerHTML = '';
   }
 
+  /** 登録フォームの in_* を空にし、登録モードに戻す */
+  function clearForm(root) {
+    if (!root) return;
+    var inputs = root.querySelectorAll('[name^="in_"]');
+    for (var i = 0; i < inputs.length; i++) {
+      if (typeof inputs[i].value !== 'undefined') inputs[i].value = '';
+    }
+    setEntryMode(root, 'insert');
+    clearEntryMessage(root);
+  }
+
+  function takePendingDelete(name) {
+    var list = H.pendingDeletes;
+    if (!list) return null;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].sql === name) return list.splice(i, 1)[0];
+    }
+    return null;
+  }
+
+  /** 登録フォームのキーが、削除した行と同じときだけ空にする */
+  function clearDeletedForm(deleted) {
+    var sel = deleted.form || '';
+    if (sel.charAt(0) !== '#' && sel.charAt(0) !== '.') return;
+    var form = document.querySelector(sel);
+    if (form && formShowsDeleted(form, deleted.row)) clearForm(form);
+  }
+
+  function formShowsDeleted(root, row) {
+    var keys = root.querySelectorAll('[data-key]');
+    if (!keys.length || !row) return false;
+    var matched = false;
+    for (var i = 0; i < keys.length; i++) {
+      var el = keys[i];
+      var name = el.name || '';
+      if (name.indexOf('in_') !== 0) return false;
+      var key = name.substring(3);
+      if (!Object.prototype.hasOwnProperty.call(row, key)) return false;
+      var formVal = el.value == null ? '' : String(el.value);
+      var rowVal = row[key] == null ? '' : String(row[key]);
+      if (formVal === '' || formVal !== rowVal) return false;
+      matched = true;
+    }
+    return matched;
+  }
+
   function inInsertMode(root) {
     var btn = root && root.querySelector ? root.querySelector('button[data-insert], button[data-update]') : null;
     if (!btn) return true;
@@ -659,6 +734,8 @@
     filled[pending.key.name] = true;
     startEntry(btn, filled);
   };
+
+  installCopyCursor();
 
   var modeButtons = document.querySelectorAll('button[data-insert], button[data-update]');
   for (var m = 0; m < modeButtons.length; m++) setEntryMode(scopeOf(modeButtons[m]), 'insert');

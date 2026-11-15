@@ -1,6 +1,9 @@
 package jp.htmldbapp.web;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.util.function.BiConsumer;
+import javax.swing.SwingUtilities;
 
 /**
  * JavaScript から呼ばれるブリッジ（window.htmldbBridge として公開）。
@@ -46,5 +49,12 @@ public class JsBridge {
     /** JS: window.htmldbBridge.log('info', 'message') — 画面側からログ出力 */
     public void log(String level, String message) {
         logger.accept(level, message);
+    }
+
+    /** JS: window.htmldbBridge.copy('山田') — 一覧セルの値をクリップボードへ */
+    public void copy(String text) {
+        String value = text == null ? "" : text;
+        SwingUtilities.invokeLater(() -> Toolkit.getDefaultToolkit().getSystemClipboard()
+                .setContents(new StringSelection(value), null));
     }
 }

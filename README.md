@@ -41,7 +41,7 @@ SELECT * FROM customer WHERE id = :customerId
 | `data-from="out_searchCustomer"` | 開くとき、その結果欄で選択している行の値を渡す |
 | `data-fields="顧客ID=id,名前=newName"` | 結果の列名を、同じ画面の `name="in_id"` などに対応付ける |
 | `data-row-edit="#customerForm"` | 各行の先頭に「編集」。押すと `data-fields` の対応で入力欄へ入れる（値はスクロール先） |
-| `data-row-delete="deleteCustomer"` | となりに「削除」。その行の値で SQL を実行する |
+| `data-row-delete="deleteCustomer"` | となりに「削除」。その行の値で SQL を実行する。成功し、登録フォームのキーが削除した行と同じなら、そのフォームを空にして「登録」に戻す |
 | `data-row-then="searchCustomer"` | 行の削除が成功したあとに続けて実行する |
 | `data-row-confirm="削除しますか？"` | 行を削除する前の確認 |
 | `data-clear="#customerForm"` | その要素の中にある `in_*` を空にする。キーは入力可に戻り、ボタンは「登録」 |
@@ -248,7 +248,7 @@ java -jar target/htmldbapp-1.0.0-all.jar --smoke-test   # サンプル画面で�
 ## 7. 制限事項（MVP）
 
 - SQL 実行のたびに接続を開閉します（コネクションプールなし）。トランザクションは自動コミット（複数文ファイルも 1 文ずつコミット）。
-- 結果の表示形式は表のみ（ページングは未対応）。行ごとの「編集」「削除」は `data-row-edit` / `data-row-delete`、別画面への移動は `data-open` で行います。
+- 結果の表示形式は表のみ（ページングは未対応）。セルをクリックすると、その表示値をクリップボードへコピーします。行ごとの「編集」「削除」は `data-row-edit` / `data-row-delete`、別画面への移動は `data-open` で行います。
 - 型指定のない値は文字列としてバインドされます。PostgreSQL など型に厳しい DB では `data-type` を付けるか SQL 側で `CAST` してください。
 - ストアドプロシージャの OUT パラメータ、BLOB の表示・登録は未対応です。
 - `secret.key` と `connections.json` の両方を持ち出されるとパスワードは復号できます（OS ログインユーザー単位の保護です）。
