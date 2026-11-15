@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Oracle管理</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Oracle管理 / スキーマ</h1>
+
+  <!-- メッセージ表示欄: id="msg" -->
+  <div id="msg"></div>
+
+  <fieldset>
+    <legend>検索</legend>
+    <!-- 検索条件。登録欄の名前・都道府県とは別名（in_name / in_pref）にして衝突を避ける -->
+    <label>スキーマ名</label><input name="in_schemaName" placeholder="部分一致（空欄で全件）">
+    <button id="btn_schemaSearch">検索</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>一覧</legend>
+    <!--
+      data-fields … 行の「編集」で、列の値を下の name="in_項目" に入れる
+      data-row-edit … 各行の先頭に「編集」（値はスクロール先）
+      data-row-delete … となりに「削除」。その行の値で sql/deleteCustomer.sql を実行
+      data-row-then … 削除のあと一覧を同じ検索条件で再表示
+    -->
+    <div id="out_schemaSearch">（検索ボタンを押してください）</div>
+  </fieldset>
+
+</body>
+</html>
