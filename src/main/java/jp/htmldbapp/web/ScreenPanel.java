@@ -63,7 +63,7 @@ public class ScreenPanel extends JFXPanel {
         this.actionService = actionService;
         this.statusSink = statusSink;
         this.bridge = new JsBridge(this::onExecute, this::onOpenScreen,
-                (level, msg) -> AppLog.info("[画面] " + level + ": " + msg), this::onScalar);
+                (level, msg) -> AppLog.info("[画面] " + level + ": " + msg), this::onScalar, this::onRowLoad);
         this.injectScript = loadInjectScript();
         Platform.runLater(this::initFx);
     }
@@ -293,6 +293,24 @@ public class ScreenPanel extends JFXPanel {
         });
     }
 
+    /** 編集。一覧のキーで SELECT し、先頭行を登録フォームへ返す。結果表には出さない。 */
+    private void onRowLoad(String sqlName, String screenJson) {
+        sqlExecutor.submit(() -> {
+            ActionService.Result r = actionService.run(sqlName, screenJson);
+            String rowJson = r.ok ? firstRowJson(r) : "null";
+            String error = !r.ok ? r.message : ("null".equals(rowJson) ? "編集用のデータがありません" : "");
+            String js = "window.__htmldb && window.__htmldb.rowDone("
+                    + rowJson + "," + JsonOutput.toJson(error) + ")";
+            Platform.runLater(() -> {
+                try {
+                    engine.executeScript(js);
+                } catch (RuntimeException e) {
+                    AppLog.error("編集データの反映に失敗しました", e);
+                }
+            });
+        });
+    }
+
     /** 自動採番。結果表には出さず、先頭の1件を画面のキー項目へ返す。 */
     private void onScalar(String sqlName, String screenJson) {
         sqlExecutor.submit(() -> {
@@ -316,6 +334,19 @@ public class ScreenPanel extends JFXPanel {
         if (!r.ok || r.exec == null || r.exec.getGeneratedKey() == null) return "null";
         String text = formatScalar(r.exec.getGeneratedKey());
         return text.isEmpty() ? "null" : JsonOutput.toJson(text);
+    }
+
+    /** SELECT 先頭行を {列別名: 表示文字列} にする。行が無ければ null。 */
+    private static String firstRowJson(ActionService.Result r) {
+        if (r.exec == null || !r.exec.isQuery() || r.exec.getRows().isEmpty()) return "null";
+        var cols = r.exec.getColumns();
+        var row = r.exec.getRows().get(0);
+        Map<String, String> values = new LinkedHashMap<>();
+        for (int i = 0; i < cols.size() && i < row.size(); i++) {
+            Object v = row.get(i);
+            values.put(cols.get(i), v == null ? "" : formatScalar(v));
+        }
+        return JsonOutput.toJson(values);
     }
 
     private static String firstCell(ActionService.Result r) {

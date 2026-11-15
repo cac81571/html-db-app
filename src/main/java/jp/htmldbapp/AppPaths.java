@@ -60,8 +60,8 @@ public final class AppPaths {
                 extractIfMissing(sample.resolve("sql"), "samples/顧客管理/sql/",
                         new String[] {"initSample.sql", "searchCustomer.sql", "saveCustomer.sql",
                                 "insertCustomer.sql", "updateCustomer.sql", "deleteCustomer.sql",
-                                "nextCustomerId.sql", "initTicket.sql", "searchTicket.sql",
-                                "insertTicket.sql", "updateTicket.sql", "deleteTicket.sql"});
+                                "nextCustomerId.sql", "loadCustomer.sql", "initTicket.sql", "searchTicket.sql",
+                                "insertTicket.sql", "updateTicket.sql", "deleteTicket.sql", "loadTicket.sql"});
             }
         }
         extractCsvSample();
@@ -72,7 +72,7 @@ public final class AppPaths {
         extractIfMissing(dir, "samples/CSV編集/", new String[] {"items.html", "style.css", "items.csv"});
         extractIfMissing(dir.resolve("sql"), "samples/CSV編集/sql/",
                 new String[] {"searchItem.sql", "insertItem.sql", "updateItem.sql", "deleteItem.sql",
-                        "nextItemId.sql"});
+                        "nextItemId.sql", "loadItem.sql"});
     }
 
     private static void copyFiles(Path from, Path to) throws IOException {

@@ -35,13 +35,17 @@
   <fieldset>
     <legend>一覧</legend>
     <!--
-      data-fields … 行の「編集」で、列の値を下の name="in_項目" に入れる
-      data-row-edit … 各行の先頭に「編集」（値はスクロール先）
-      data-row-delete … となりに「削除」。その行の値で sql/deleteCustomer.sql を実行
-      data-row-then … 削除のあと一覧を同じ検索条件で再表示
+      一覧の列は searchCustomer.sql の別名。登録欄とは別項目。
+      data-row-key … 編集と削除に渡すキー（一覧の顧客ID → :id）
+      data-row-load … 「編集」で loadCustomer.sql を実行し、その結果を登録欄へ入れる
+      data-row-edit … 登録欄の位置
+      data-row-delete … 「削除」
+      data-row-then … 削除のあと一覧を searchCustomer.sql で取り直す
+      登録ボタンの data-then も、保存後の一覧を同じ SELECT で取り直す
     -->
     <div id="out_searchCustomer"
-         data-fields="顧客ID=id,名前=newName,都道府県=newPref,メール=email,登録日=joinedOn"
+         data-row-key="顧客ID=id"
+         data-row-load="loadCustomer"
          data-row-edit="#customerForm"
          data-row-delete="deleteCustomer"
          data-row-then="searchCustomer"

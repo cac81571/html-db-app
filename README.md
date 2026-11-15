@@ -39,8 +39,10 @@ SELECT * FROM customer WHERE id = :customerId
 | `data-confirm="削除しますか？"` | 実行前に確認ダイアログを表示 |
 | `data-open="customerForm.html"` | その HTML 画面を開く（`id` が `btn_` ではないボタン）。SQL は実行しない |
 | `data-from="out_searchCustomer"` | 開くとき、その結果欄で選択している行の値を渡す |
-| `data-fields="顧客ID=id,名前=newName"` | 結果の列名を、同じ画面の `name="in_id"` などに対応付ける |
-| `data-row-edit="#customerForm"` | 各行の先頭に「編集」。押すと `data-fields` の対応で入力欄へ入れる（値はスクロール先） |
+| `data-fields="顧客ID=id,名前=newName"` | 結果の列を、同じ画面の `name="in_id"` などに対応付ける。`data-row-key` があるときは使わない |
+| `data-row-key="顧客ID=id"` | 一覧のその列だけを、編集と削除の SQL パラメータにする |
+| `data-row-load="loadCustomer"` | 「編集」で `sql/loadCustomer.sql` を実行し、結果の列別名を登録フォームの `in_` に入れる |
+| `data-row-edit="#customerForm"` | 各行の先頭に「編集」。入れる先の登録フォーム。`data-row-load` が無いときは `data-fields` の値を入れる |
 | `data-row-delete="deleteCustomer"` | となりに「削除」。その行の値で SQL を実行する。成功し、登録フォームのキーが削除した行と同じなら、そのフォームを空にして「登録」に戻す |
 | `data-row-then="searchCustomer"` | 行の削除が成功したあとに続けて実行する |
 | `data-row-confirm="削除しますか？"` | 行を削除する前の確認 |
@@ -76,14 +78,15 @@ SELECT * FROM customer WHERE id = :customerId
 
 ```html
 <div id="out_searchCustomer"
-     data-fields="顧客ID=id,名前=newName,都道府県=newPref,メール=email,登録日=joinedOn"
+     data-row-key="顧客ID=id"
+     data-row-load="loadCustomer"
      data-row-edit="#customerForm"
      data-row-delete="deleteCustomer"
      data-row-then="searchCustomer"
      data-row-confirm="この顧客を削除します。よろしいですか？"></div>
 ```
 
-「編集」はその行の値を下の入力欄へ入れます。手入力のキー（`data-key` のみ）のラベルには ＊ が付き、編集中は変更できません。空欄や登録の失敗は、登録パネルの上に1か所だけ出ます。`data-auto` のキーは登録のたびに SQL の結果（サンプルは最大値 + 1）が入り、欄は非活性です。列自体が identity のときは `data-increment` を付け、登録 SQL からその列を外します。サンプルは `sample_project/顧客管理/identity.html`（表 `ticket`）です。どちらも手入力とは併用しません。ボタンは「更新」になり `sql/updateCustomer.sql` を実行します。「クリア」で「登録」に戻り、`sql/insertCustomer.sql` を実行します。
+一覧の列は `searchCustomer.sql` の別名、登録欄は `loadCustomer.sql` の別名です。同じ項目名である必要はありません。「編集」は一覧のキーだけで `loadCustomer.sql` を実行し、その SELECT 結果を登録欄へ入れます。登録や更新のあと、および削除のあとは `data-then` / `data-row-then` の SELECT で一覧を取り直します。手入力のキー（`data-key` のみ）のラベルには ＊ が付き、編集中は変更できません。空欄や登録の失敗は、登録パネルの上に1か所だけ出ます。`data-auto` のキーは登録のたびに SQL の結果（サンプルは最大値 + 1）が入り、欄は非活性です。列自体が identity のときは `data-increment` を付け、登録 SQL からその列を外します。サンプルは `sample_project/顧客管理/identity.html`（表 `ticket`）です。どちらも手入力とは併用しません。ボタンは「更新」になり `sql/updateCustomer.sql` を実行します。「クリア」で「登録」に戻り、`sql/insertCustomer.sql` を実行します。
 
 別の HTML へ移すときは、`btn_` ではないボタンに `data-open="別画面.html"` を付けます。`<body data-keep>` を付けると、離れる前の入力と結果を覚えて、戻ったときに復元します。
 

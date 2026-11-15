@@ -25,7 +25,8 @@
   <fieldset>
     <legend>一覧</legend>
     <div id="out_searchTicket"
-         data-fields="番号=id,件名=title"
+         data-row-key="番号=id"
+         data-row-load="loadTicket"
          data-row-edit="#ticketForm"
          data-row-delete="deleteTicket"
          data-row-then="searchTicket"

@@ -32,7 +32,8 @@
   <fieldset>
     <legend>一覧</legend>
     <div id="out_searchItem"
-         data-fields="商品ID=id,品名=itemName,分類=itemCategory,数量=qty,メモ=note"
+         data-row-key="商品ID=id"
+         data-row-load="loadItem"
          data-row-edit="#itemForm"
          data-row-delete="deleteItem"
          data-row-then="searchItem"

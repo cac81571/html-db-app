@@ -22,18 +22,26 @@ public class JsBridge {
     private final BiConsumer<String, String> logger;
     /** (sqlName, screenJson) 自動採番など、結果を画面の表に出さない SQL */
     private final BiConsumer<String, String> scalar;
+    /** (sqlName, screenJson) 編集時に登録フォームへ入れる1行 */
+    private final BiConsumer<String, String> rowLoad;
 
     public JsBridge(Handler handler, BiConsumer<String, String> opener, BiConsumer<String, String> logger,
-            BiConsumer<String, String> scalar) {
+            BiConsumer<String, String> scalar, BiConsumer<String, String> rowLoad) {
         this.handler = handler;
         this.opener = opener;
         this.logger = logger;
         this.scalar = scalar;
+        this.rowLoad = rowLoad;
     }
 
     /** JS: window.htmldbBridge.scalar('nextCustomerId', '{"params":{...}}') — 結果の先頭を JS の autoDone へ返す */
     public void scalar(String sqlName, String screenJson) {
         scalar.accept(sqlName, screenJson == null ? "{}" : screenJson);
+    }
+
+    /** JS: window.htmldbBridge.load('loadCustomer', '{"params":{"id":"1"}}') — 先頭行を登録フォームへ */
+    public void load(String sqlName, String screenJson) {
+        rowLoad.accept(sqlName, screenJson == null ? "{}" : screenJson);
     }
 
     /** JS: window.htmldbBridge.execute('searchCustomer', '{"params":{...}}', 'otherSql') */

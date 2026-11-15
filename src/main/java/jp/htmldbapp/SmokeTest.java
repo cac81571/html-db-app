@@ -202,7 +202,11 @@ final class SmokeTest {
     }
 
     private static void setClipboard(String text) {
-        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
+        try {
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
+        } catch (IllegalStateException ignore) {
+            // 他のアプリがクリップボードを開いているときは戻さない
+        }
     }
 
     private static void waitUntil(java.util.function.BooleanSupplier cond, int seconds) throws Exception {

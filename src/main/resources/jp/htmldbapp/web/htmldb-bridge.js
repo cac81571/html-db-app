@@ -9,7 +9,9 @@
  *  - data-open="画面.html" : その画面を開く（btn_ ではないボタン。SQL は実行しない）
  *  - data-from="out_xxx"   : 開くとき、その結果欄で選択中の行の値を渡す
  *  - data-fields="列名=項目,..." : 結果の列を、同じ画面の name="in_項目" に対応付ける
- *  - data-row-edit="#id"  : 各行の先頭に「編集」。押すと data-fields の対応で入力欄へ入れる
+ *  - data-row-key="列名=項目" : 行から SQL に渡すキー。編集の SELECT と削除で使う
+ *  - data-row-load="名前" : 「編集」で sql/名前.sql を実行し、結果の列別名を登録フォームの in_ に入れる
+ *  - data-row-edit="#id"  : 各行の先頭に「編集」。data-row-load が無ければ data-fields の値を入力欄へ入れる
  *  - data-row-delete="名前" : となりに「削除」。その行の値で sql/名前.sql を実行。
  *    成功し、登録フォームのキーが削除した行と同じなら、そのフォームを空にして登録モードに戻す
  *  - data-row-then="名前"  : 行の削除が成功したあとに続けて実行
@@ -61,7 +63,8 @@
 
   /** "顧客ID=id,名前=name" → { 顧客ID: "id", 名前: "name" }。未指定なら null（列名をそのまま項目名にする） */
   function fieldMap(host) {
-    var attr = host.getAttribute('data-fields');
+    var attr = host.getAttribute('data-row-key');
+    if (attr == null || !trim(attr)) attr = host.getAttribute('data-fields');
     if (attr == null || !trim(attr)) { return null; }
     var map = {};
     var parts = attr.split(',');
@@ -180,11 +183,15 @@
 
   /** Java から呼ばれる: 渡された値を name="in_項目" にセットする */
   H.apply = function (params) {
-    if (!params) { return; }
+    applyTo(document, params);
+  };
+
+  function applyTo(root, params) {
+    if (!root || !params) { return; }
     for (var key in params) {
       if (!Object.prototype.hasOwnProperty.call(params, key)) { continue; }
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) { continue; }
-      var el = document.querySelector('[name="in_' + key + '"]');
+      var el = root.querySelector('[name="in_' + key + '"]');
       if (!el || typeof el.value === 'undefined') { continue; }
       var text = params[key] == null ? '' : String(params[key]);
       var inputType = (el.type || '').toLowerCase();
@@ -319,11 +326,22 @@
     if (!tr || !host) return;
     var action = button.getAttribute('data-row-action');
     if (action === 'edit') {
-      H.apply(readRow(tr, host));
       var sel = host.getAttribute('data-row-edit') || '';
-      if (sel.charAt(0) === '#' || sel.charAt(0) === '.') {
-        var form = document.querySelector(sel);
+      var form = (sel.charAt(0) === '#' || sel.charAt(0) === '.') ? document.querySelector(sel) : null;
+      var loadSql = host.getAttribute('data-row-load') || '';
+      if (loadSql && /^[A-Za-z0-9_\-]+$/.test(loadSql)) {
         if (form && form.scrollIntoView) {
+          try { form.scrollIntoView({ block: 'nearest' }); }
+          catch (err) { form.scrollIntoView(); }
+        }
+        H.loadPending = { form: sel };
+        var keys = readRow(tr, host);
+        window.htmldbBridge.load(loadSql, JSON.stringify({ params: keys, types: typesFor(form, keys) }));
+        return;
+      }
+      H.apply(readRow(tr, host));
+      if (form) {
+        if (form.scrollIntoView) {
           try { form.scrollIntoView({ block: 'nearest' }); }
           catch (err) { form.scrollIntoView(); }
         }
@@ -712,6 +730,39 @@
     if (isEntryButton(btn) && !requireKeys(root)) return;
     H.run(sqlName, btn);
   }
+
+  function typesFor(root, params) {
+    var types = {};
+    for (var k in params) {
+      if (!Object.prototype.hasOwnProperty.call(params, k)) continue;
+      var el = root && root.querySelector ? root.querySelector('[name="in_' + k + '"]') : null;
+      var dt = el && typeOf(el);
+      if (dt) types[k] = dt;
+    }
+    if (params.id != null && params.id !== '' && !types.id) types.id = 'int';
+    return types;
+  }
+
+  /** Java から呼ばれる: 編集用 SELECT の先頭行を登録フォームへ入れる */
+  H.rowDone = function (row, error) {
+    var pending = H.loadPending;
+    H.loadPending = null;
+    if (!pending) return;
+    var form = pending.form ? document.querySelector(pending.form) : null;
+    if (error) {
+      if (form) showEntryMessage(form, error, true);
+      else H.msg(error, true);
+      return;
+    }
+    if (!form) return;
+    var inputs = form.querySelectorAll('[name^="in_"]');
+    for (var i = 0; i < inputs.length; i++) {
+      if (typeof inputs[i].value !== 'undefined') inputs[i].value = '';
+    }
+    applyTo(form, row || {});
+    setEntryMode(form, 'update');
+    clearEntryMessage(form);
+  };
 
   /** Java から呼ばれる: 自動採番 SQL の先頭の値をキーへ入れて、登録を続ける */
   H.autoDone = function (value, error) {
