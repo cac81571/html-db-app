@@ -5,7 +5,7 @@ SELECT id       AS "商品ID",
        category AS "分類",
        qty      AS "数量",
        note     AS "メモ"
-  FROM CSVREAD('CSV編集/items.csv', NULL, 'charset=UTF-8')
+  FROM CSVREAD('sample_project/CSV編集/items.csv', NULL, 'charset=UTF-8')
  WHERE (CAST(:name AS VARCHAR) IS NULL OR name LIKE '%' || CAST(:name AS VARCHAR) || '%')
    AND (CAST(:category AS VARCHAR) IS NULL OR category = CAST(:category AS VARCHAR))
    AND (CAST(:noteQ AS VARCHAR) IS NULL OR note LIKE '%' || CAST(:noteQ AS VARCHAR) || '%')

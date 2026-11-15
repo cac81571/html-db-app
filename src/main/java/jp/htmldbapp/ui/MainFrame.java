@@ -538,10 +538,10 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /** 設定が無ければ起動フォルダを1件だけ返す。ファイルがあればその内容だけ（空なら空）。 */
+    /** 設定が無ければ sample_project を1件だけ返す。ファイルがあればその内容だけ（空なら空）。 */
     private List<Path> readProjects() throws IOException {
         Path file = projectsFile();
-        if (!Files.isRegularFile(file)) return List.of(paths.home());
+        if (!Files.isRegularFile(file)) return List.of(paths.sampleProjectDir());
         List<Path> projects = new ArrayList<>();
         for (String line : Files.readString(file, StandardCharsets.UTF_8).split("\\R")) {
             String text = line.trim();

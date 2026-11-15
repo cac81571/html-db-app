@@ -9,7 +9,7 @@ import java.nio.file.Paths;
 /**
  * アプリが使うフォルダの場所。
  * <ul>
- *   <li>作業フォルダ（画面フォルダ/ と drivers/）: システムプロパティ htmldbapp.home、未指定ならカレントディレクトリ</li>
+ *   <li>作業フォルダ（sample_project/ と drivers/）: システムプロパティ htmldbapp.home、未指定ならカレントディレクトリ</li>
  *   <li>設定フォルダ（connections.json, secret.key, logs/）: システムプロパティ htmldbapp.config、未指定なら ~/.htmldbapp</li>
  * </ul>
  */
@@ -40,17 +40,21 @@ public final class AppPaths {
     public Path keyFile() { return configDir.resolve("secret.key"); }
     public Path logFile() { return configDir.resolve("logs").resolve("app.log"); }
 
+    /** 初期のプロジェクトフォルダ。画面サンプルはここに展開する。 */
+    public Path sampleProjectDir() { return home.resolve("sample_project"); }
+
     /** 画面フォルダが無ければサンプルを作る。古い screens/ と sql/ があれば「顧客管理」へコピーする。 */
     public void ensureWorkspace() throws IOException {
         Files.createDirectories(configDir);
         Files.createDirectories(driversDir());
-        Path sample = home.resolve("顧客管理");
+        Files.createDirectories(sampleProjectDir());
+        Path sample = sampleProjectDir().resolve("顧客管理");
         if (!Files.isDirectory(sample)) {
             if (Files.isDirectory(screensDir()) || Files.isDirectory(sqlDir())) {
                 Files.createDirectories(sample.resolve("sql"));
                 copyFiles(screensDir(), sample);
                 copyFiles(sqlDir(), sample.resolve("sql"));
-                AppLog.info("screens/ と sql/ を 顧客管理/ にコピーしました");
+                AppLog.info("screens/ と sql/ を sample_project/顧客管理/ にコピーしました");
             } else {
                 extractIfMissing(sample, "samples/顧客管理/", new String[] {"customer.html", "identity.html", "style.css"});
                 extractIfMissing(sample.resolve("sql"), "samples/顧客管理/sql/",
@@ -64,7 +68,7 @@ public final class AppPaths {
     }
 
     private void extractCsvSample() throws IOException {
-        Path dir = home.resolve("CSV編集");
+        Path dir = sampleProjectDir().resolve("CSV編集");
         extractIfMissing(dir, "samples/CSV編集/", new String[] {"items.html", "style.css", "items.csv"});
         extractIfMissing(dir.resolve("sql"), "samples/CSV編集/sql/",
                 new String[] {"searchItem.sql", "insertItem.sql", "updateItem.sql", "deleteItem.sql",

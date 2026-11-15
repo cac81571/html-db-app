@@ -20,7 +20,7 @@ class ActionServiceTest {
     @Test
     void サンプルSQLで初期化_検索_登録_削除() {
         ConnectionInfo h2 = new ConnectionInfo("test", "jdbc:h2:mem:sample;DB_CLOSE_DELAY=-1", "sa", "", "");
-        ActionService svc = new ActionService(Paths.get("顧客管理/sql"), new ConnectionFactory(tmp), () -> h2);
+        ActionService svc = new ActionService(Paths.get("sample_project/顧客管理/sql"), new ConnectionFactory(tmp), () -> h2);
 
         ActionService.Result init = svc.run("initSample", "{}");
         assertTrue(init.ok, init.message);

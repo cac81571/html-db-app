@@ -23,7 +23,7 @@ final class SmokeTest {
             String[] formValue = { "" };
             try {
                 ScreenPanel sp = frame.getScreenPanel();
-                Path customer = Path.of("顧客管理", "customer.html").toAbsolutePath().normalize();
+                Path customer = Path.of("sample_project", "顧客管理", "customer.html").toAbsolutePath().normalize();
                 waitUntil(sp::isReady, 30);
                 if (sp.getCurrentFile() == null || !customer.equals(sp.getCurrentFile().toAbsolutePath().normalize())) {
                     sp.showScreen(customer);
@@ -99,7 +99,7 @@ final class SmokeTest {
                                 && !place.substring(split).contains("の実行でエラー");
                     }, 30);
                     AppLog.info("[smoke] 登録エラー: 登録パネルの上だけ");
-                    Path items = Path.of("CSV編集", "items.html").toAbsolutePath().normalize();
+                    Path items = Path.of("sample_project", "CSV編集", "items.html").toAbsolutePath().normalize();
                     sp.showScreen(items);
                     waitUntil(() -> sp.isReady() && sp.getCurrentFile() != null
                             && items.equals(sp.getCurrentFile().toAbsolutePath().normalize())
@@ -108,7 +108,7 @@ final class SmokeTest {
                     waitUntil(() -> String.valueOf(eval(sp,
                             "document.getElementById('out_searchItem').innerText")).contains("ノートA5"), 30);
                     AppLog.info("[smoke] CSV検索: ノートA5");
-                    Path identity = Path.of("顧客管理", "identity.html").toAbsolutePath().normalize();
+                    Path identity = Path.of("sample_project", "顧客管理", "identity.html").toAbsolutePath().normalize();
                     sp.showScreen(identity);
                     waitUntil(() -> sp.isReady() && sp.getCurrentFile() != null
                             && identity.equals(sp.getCurrentFile().toAbsolutePath().normalize())

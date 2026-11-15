@@ -120,11 +120,11 @@
       </resource>
       <!-- 初回起動時に展開するサンプル（顧客管理/ をそのまま同梱） -->
       <resource>
-        <directory>顧客管理</directory>
+        <directory>sample_project/顧客管理</directory>
         <targetPath>samples/顧客管理</targetPath>
       </resource>
       <resource>
-        <directory>CSV編集</directory>
+        <directory>sample_project/CSV編集</directory>
         <targetPath>samples/CSV編集</targetPath>
       </resource>
     </resources>

@@ -83,14 +83,14 @@ SELECT * FROM customer WHERE id = :customerId
      data-row-confirm="この顧客を削除します。よろしいですか？"></div>
 ```
 
-「編集」はその行の値を下の入力欄へ入れます。手入力のキー（`data-key` のみ）のラベルには ＊ が付き、編集中は変更できません。空欄や登録の失敗は、登録パネルの上に1か所だけ出ます。`data-auto` のキーは登録のたびに SQL の結果（サンプルは最大値 + 1）が入り、欄は非活性です。列自体が identity のときは `data-increment` を付け、登録 SQL からその列を外します。サンプルは `顧客管理/identity.html`（表 `ticket`）です。どちらも手入力とは併用しません。ボタンは「更新」になり `sql/updateCustomer.sql` を実行します。「クリア」で「登録」に戻り、`sql/insertCustomer.sql` を実行します。
+「編集」はその行の値を下の入力欄へ入れます。手入力のキー（`data-key` のみ）のラベルには ＊ が付き、編集中は変更できません。空欄や登録の失敗は、登録パネルの上に1か所だけ出ます。`data-auto` のキーは登録のたびに SQL の結果（サンプルは最大値 + 1）が入り、欄は非活性です。列自体が identity のときは `data-increment` を付け、登録 SQL からその列を外します。サンプルは `sample_project/顧客管理/identity.html`（表 `ticket`）です。どちらも手入力とは併用しません。ボタンは「更新」になり `sql/updateCustomer.sql` を実行します。「クリア」で「登録」に戻り、`sql/insertCustomer.sql` を実行します。
 
 別の HTML へ移すときは、`btn_` ではないボタンに `data-open="別画面.html"` を付けます。`<body data-keep>` を付けると、離れる前の入力と結果を覚えて、戻ったときに復元します。
 
 ### 結果表示の CSS クラス
 
 `table.htmldb-result`（結果表）、`td.htmldb-null`（NULL セル）、`.htmldb-count`（件数）、`.htmldb-update`（更新件数）、
-`.htmldb-error`（エラー）、`#msg.htmldb-msg-ok` / `#msg.htmldb-msg-error`（メッセージ）。サンプルの `顧客管理/style.css` を参照してください。
+`.htmldb-error`（エラー）、`#msg.htmldb-msg-ok` / `#msg.htmldb-msg-error`（メッセージ）。サンプルの `sample_project/顧客管理/style.css` を参照してください。
 
 ---
 
@@ -133,7 +133,7 @@ java -jar target\htmldbapp-1.0.0-all.jar
 
 ### 初めて起動したら
 
-1. 左の「プロジェクトフォルダ」は、最初は起動したフォルダです。ツリーはその直下の画面フォルダ（`顧客管理` など）から表示します。フォルダの入れ子は、画面フォルダのグループになります。`customer.html` は自動で開きます。
+1. 左の「プロジェクトフォルダ」は、最初は起動フォルダの `sample_project` です。ツリーはその直下の画面フォルダ（`顧客管理` など）から表示します。フォルダの入れ子は、画面フォルダのグループになります。`customer.html` は自動で開きます。
 2. 接続先が「サンプル H2」になっていることを確認（DB は `%USERPROFILE%\.htmldbapp\sample.mv.db` に作られます）。
 3. 「サンプルテーブルを作成」ボタン → テーブル作成・データ投入・検索まで実行されます。
 4. 下の欄に入力して「登録」で保存します。登録に成功するとボタンは「更新」になります。行の「編集」でもその顧客を読み込めます。顧客IDは変更できません。行の「削除」で消せます。欄を空にして「登録」に戻すときは「クリア」です。
@@ -145,34 +145,36 @@ java -jar target\htmldbapp-1.0.0-all.jar
 ## 3. フォルダ構成
 
 ```
-プロジェクトフォルダ/      … 左の一覧に追加したフォルダ（初期値は起動したフォルダ）
-├─ 顧客管理/           … 画面フォルダ
-│   ├─ customer.html       … 一覧と登録
-│   ├─ identity.html       … DB の identity で番号を採る
-│   ├─ style.css
-│   └─ sql/                … この画面の SQL（ボタン名 = ファイル名）
-│       ├─ initSample.sql
-│       ├─ searchCustomer.sql
-│       ├─ saveCustomer.sql    … 登録／更新
-│       ├─ insertCustomer.sql
-│       ├─ updateCustomer.sql
-│       ├─ deleteCustomer.sql
-│       ├─ nextCustomerId.sql  … 空欄の顧客IDへ入れる番号
-│       ├─ initTicket.sql
-│       ├─ searchTicket.sql
-│       ├─ insertTicket.sql      … 番号列を書かない
-│       ├─ updateTicket.sql
-│       └─ deleteTicket.sql
-├─ CSV編集/            … CSV を H2 の CSVREAD / CSVWRITE で検索・編集するサンプル
-│   ├─ items.html
-│   ├─ items.csv           … 商品データ（UTF-8）
-│   ├─ style.css
-│   └─ sql/
-│       ├─ searchItem.sql
-│       ├─ insertItem.sql
-│       ├─ updateItem.sql
-│       ├─ deleteItem.sql
-│       └─ nextItemId.sql
+起動フォルダ/              … アプリを起動した場所
+├─ sample_project/         … 初期のプロジェクトフォルダ
+│   ├─ 顧客管理/           … 画面フォルダ
+│   │   ├─ customer.html       … 一覧と登録
+│   │   ├─ identity.html       … DB の identity で番号を採る
+│   │   ├─ style.css
+│   │   └─ sql/                … この画面の SQL（ボタン名 = ファイル名）
+│   │       ├─ initSample.sql
+│   │       ├─ searchCustomer.sql
+│   │       ├─ saveCustomer.sql    … 登録／更新
+│   │       ├─ insertCustomer.sql
+│   │       ├─ updateCustomer.sql
+│   │       ├─ deleteCustomer.sql
+│   │       ├─ nextCustomerId.sql  … 空欄の顧客IDへ入れる番号
+│   │       ├─ initTicket.sql
+│   │       ├─ searchTicket.sql
+│   │       ├─ insertTicket.sql      … 番号列を書かない
+│   │       ├─ updateTicket.sql
+│   │       └─ deleteTicket.sql
+│   ├─ 顧客管理2/          … 顧客管理のコピー
+│   └─ CSV編集/            … CSV を H2 の CSVREAD / CSVWRITE で検索・編集するサンプル
+│       ├─ items.html
+│       ├─ items.csv           … 商品データ（UTF-8）
+│       ├─ style.css
+│       └─ sql/
+│           ├─ searchItem.sql
+│           ├─ insertItem.sql
+│           ├─ updateItem.sql
+│           ├─ deleteItem.sql
+│           └─ nextItemId.sql
 ├─ drivers/            … 追加 JDBC ドライバの JAR 置き場（再ビルド不要）
 ├─ dist/               … ビルド済み Windows 用 JAR
 ├─ src/main/java       … Swing 画面・接続管理・WebView ブリッジ（Java）
@@ -184,11 +186,11 @@ java -jar target\htmldbapp-1.0.0-all.jar
 └─ README.md
 ```
 
-作業フォルダ（初期のプロジェクトフォルダ。画面フォルダと `drivers/` がある場所）は **起動したカレントディレクトリ** です。
-`java -Dhtmldbapp.home=D:\myapp -jar ...` で変更できます。
-画面フォルダが無い状態で起動すると、サンプル「顧客管理」と「CSV編集」が自動で展開されます。古い `screens/` と `sql/` がある場合は「顧客管理」へコピーします。
+作業フォルダは **起動したカレントディレクトリ** です。初期のプロジェクトフォルダは、その中の `sample_project` です。
+`java -Dhtmldbapp.home=D:\myapp -jar ...` で作業フォルダを変更できます。
+`sample_project` に画面フォルダが無い状態で起動すると、サンプル「顧客管理」と「CSV編集」が自動で展開されます。古い `screens/` と `sql/` がある場合は `sample_project/顧客管理` へコピーします。
 
-`CSV編集` はデータベースに表を作らず、H2 の `CSVREAD` で `items.csv` を検索します。登録・更新・削除は同じファイルを読み、変更した内容を `CSVWRITE` で書き戻します。パスは起動したフォルダからの相対パス、文字コードは UTF-8 です。接続先は「サンプル H2」のままで動きます。
+`CSV編集` はデータベースに表を作らず、H2 の `CSVREAD` で `items.csv` を検索します。登録・更新・削除は同じファイルを読み、変更した内容を `CSVWRITE` で書き戻します。パスは起動したフォルダからの相対パス（`sample_project/CSV編集/items.csv`）、文字コードは UTF-8 です。接続先は「サンプル H2」のままで動きます。
 
 設定は `%USERPROFILE%\.htmldbapp\` に保存されます（`-Dhtmldbapp.config=...` で変更可）。
 
@@ -198,7 +200,7 @@ java -jar target\htmldbapp-1.0.0-all.jar
 | `secret.key` | 暗号鍵（初回起動時に自動生成。**削除すると保存済みパスワードは復号できなくなります**） |
 | `logs/app.log` | 実行ログ（SQL・パラメータ・エラー） |
 | `sakura-path.txt` | サクラエディタ (`sakura.exe`) のパス。未設定なら自動検出 |
-| `projects.txt` | 追加したプロジェクトフォルダのパス。未作成のときは起動フォルダだけ |
+| `projects.txt` | 追加したプロジェクトフォルダのパス。未作成のときは `sample_project` だけ |
 | `last-folder.txt` | 最後に選んだプロジェクトフォルダ |
 
 ---
