@@ -3,7 +3,9 @@ package jp.htmldbapp.ui;
 import java.awt.BorderLayout;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -24,6 +26,7 @@ import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
@@ -73,6 +76,9 @@ public class MainFrame extends JFrame {
     private final JComboBox<ConnectionInfo> connectionCombo = new JComboBox<>();
     private final JComboBox<Path> folderCombo = new JComboBox<>();
     private final JTextField treeFilter = new JTextField();
+    private final JCheckBox filterFolderBox = filterTarget("フォルダ");
+    private final JCheckBox filterHtmlBox = filterTarget("html");
+    private final JCheckBox filterSqlBox = filterTarget("sql");
     private final JTree fileTree = new JTree();
     private final JTextArea logArea = new JTextArea();
     private final JLabel status = new JLabel(" ");
@@ -266,7 +272,7 @@ public class MainFrame extends JFrame {
         folderButtons.add(removeProject);
         folderBar.add(folderButtons, BorderLayout.SOUTH);
 
-        treeFilter.setToolTipText("ファイル名の一部。Esc で解除");
+        treeFilter.setToolTipText("選んだ対象の名前の一部。Esc で解除");
         treeFilter.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { onFilterChanged(); }
             @Override public void removeUpdate(DocumentEvent e) { onFilterChanged(); }
@@ -279,9 +285,14 @@ public class MainFrame extends JFrame {
                 treeFilter.setText("");
             }
         });
+        JPanel filterTargets = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        filterTargets.add(new JLabel("絞り込み"));
+        filterTargets.add(filterFolderBox);
+        filterTargets.add(filterHtmlBox);
+        filterTargets.add(filterSqlBox);
         JPanel filterBar = new JPanel(new BorderLayout(4, 4));
         filterBar.setBorder(BorderFactory.createEmptyBorder(0, 6, 4, 6));
-        filterBar.add(new JLabel("絞り込み"), BorderLayout.NORTH);
+        filterBar.add(filterTargets, BorderLayout.NORTH);
         filterBar.add(treeFilter, BorderLayout.CENTER);
 
         JPanel treeButtons = new JPanel(new GridLayout(1, 2, 4, 0));
@@ -596,7 +607,7 @@ public class MainFrame extends JFrame {
         rebuildTree(false);
     }
 
-    /** 絞り込み欄の文字列。空なら全ファイル。大文字小文字は区別しない。 */
+    /** 絞り込み欄の文字列。空なら全部。チェックした対象だけ名前を比べ、大文字小文字は区別しない。 */
     private String filterQuery() {
         return treeFilter.getText().trim().toLowerCase(Locale.ROOT);
     }
@@ -605,11 +616,29 @@ public class MainFrame extends JFrame {
         return query.isEmpty() || name.toLowerCase(Locale.ROOT).contains(query);
     }
 
-    private static void addHtmlNodes(DefaultMutableTreeNode parent, Path dir, String query) {
+    /** 絞り込み文字が空なら全部。文字があるときは、その種類が対象のときだけ名前で残す。 */
+    private static boolean fileMatches(Path file, String query, boolean byName) {
+        return query.isEmpty() || (byName && nameMatches(file.getFileName().toString(), query));
+    }
+
+    private JCheckBox filterTarget(String label) {
+        JCheckBox box = new JCheckBox(label, true);
+        box.setMargin(new Insets(0, 0, 0, 0));
+        box.setToolTipText(label + " の名前を絞り込み対象にする");
+        box.addActionListener(e -> onFilterChanged());
+        return box;
+    }
+
+    /** フォルダのチェックがオンのときだけ、フォルダ名を絞り込み対象にする。 */
+    private boolean folderMatches(String name, String query) {
+        return filterFolderBox.isSelected() && nameMatches(name, query);
+    }
+
+    private static void addHtmlNodes(DefaultMutableTreeNode parent, Path dir, String query, boolean byName) {
         if (!Files.isDirectory(dir)) return;
         Collator collator = Collator.getInstance(Locale.JAPAN);
         try (Stream<Path> s = Files.list(dir)) {
-            s.filter(p -> Files.isRegularFile(p) && isHtml(p) && nameMatches(p.getFileName().toString(), query))
+            s.filter(p -> Files.isRegularFile(p) && isHtml(p) && fileMatches(p, query, byName))
                     .sorted(Comparator.comparing(p -> p.getFileName().toString(), collator))
                     .forEach(p -> parent.add(new DefaultMutableTreeNode(
                             new FileNode(p, p.getFileName().toString(), Kind.HTML))));
@@ -618,11 +647,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private static void addSqlNodes(DefaultMutableTreeNode parent, Path dir, String query) {
+    private static void addSqlNodes(DefaultMutableTreeNode parent, Path dir, String query, boolean byName) {
         if (!Files.isDirectory(dir)) return;
         Collator collator = Collator.getInstance(Locale.JAPAN);
         try (Stream<Path> s = Files.list(dir)) {
-            s.filter(p -> Files.isRegularFile(p) && isSql(p) && nameMatches(p.getFileName().toString(), query))
+            s.filter(p -> Files.isRegularFile(p) && isSql(p) && fileMatches(p, query, byName))
                     .sorted(Comparator.comparing(p -> p.getFileName().toString(), collator))
                     .forEach(p -> parent.add(new DefaultMutableTreeNode(
                             new FileNode(p, p.getFileName().toString(), Kind.SQL))));
@@ -665,9 +694,10 @@ public class MainFrame extends JFrame {
         try {
             for (String name : ScreenFolders.list(project)) {
                 Path dir = project.resolve(name);
+                boolean folderHit = folderMatches(name, query);
                 DefaultMutableTreeNode node = new DefaultMutableTreeNode(new FileNode(dir, name, Kind.FOLDER));
-                addScreenTree(node, dir, query);
-                if (query.isEmpty() || node.getChildCount() > 0) root.add(node);
+                addScreenTree(node, dir, folderHit ? "" : query);
+                if (query.isEmpty() || folderHit || node.getChildCount() > 0) root.add(node);
             }
         } catch (IOException e) {
             AppLog.error("画面フォルダを読めません: " + project, e);
@@ -678,21 +708,23 @@ public class MainFrame extends JFrame {
         try {
             for (String name : ScreenFolders.list(dir)) {
                 Path childDir = dir.resolve(name);
+                boolean folderHit = folderMatches(name, query);
                 DefaultMutableTreeNode child = new DefaultMutableTreeNode(new FileNode(childDir, name, Kind.FOLDER));
-                addScreenTree(child, childDir, query);
-                if (query.isEmpty() || child.getChildCount() > 0) parent.add(child);
+                addScreenTree(child, childDir, folderHit ? "" : query);
+                if (query.isEmpty() || folderHit || child.getChildCount() > 0) parent.add(child);
             }
         } catch (IOException e) {
             AppLog.error("画面フォルダを読めません: " + dir, e);
         }
         int folders = parent.getChildCount();
-        addHtmlNodes(parent, dir, query);
+        addHtmlNodes(parent, dir, query, filterHtmlBox.isSelected());
         boolean hasHtml = parent.getChildCount() > folders;
         Path sqlDir = dir.resolve("sql");
         if (!hasHtml && !Files.isDirectory(sqlDir)) return;
+        boolean sqlHit = folderMatches("sql", query);
         DefaultMutableTreeNode sql = new DefaultMutableTreeNode(new FileNode(sqlDir, "sql", Kind.SQL_DIR));
-        addSqlNodes(sql, sqlDir, query);
-        if (query.isEmpty() || sql.getChildCount() > 0) parent.add(sql);
+        addSqlNodes(sql, sqlDir, sqlHit ? "" : query, filterSqlBox.isSelected());
+        if (query.isEmpty() || sqlHit || sql.getChildCount() > 0) parent.add(sql);
     }
 
     /** 見えている画面フォルダだけを閉じる。非表示のプロジェクトルートは開いたままにする。 */
